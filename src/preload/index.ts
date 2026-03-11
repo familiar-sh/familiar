@@ -1,11 +1,38 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { ProjectState, Task, ActivityEntry } from '../shared/types'
 
 // Custom APIs for renderer
 const api = {
-  // File operations (to be implemented)
-  // readFile: (path: string) => ipcRenderer.invoke('file:read', path),
-  // writeFile: (path: string, data: string) => ipcRenderer.invoke('file:write', path, data),
+  // Project
+  readProjectState: (): Promise<ProjectState> => ipcRenderer.invoke('project:read-state'),
+  writeProjectState: (state: ProjectState): Promise<void> =>
+    ipcRenderer.invoke('project:write-state', state),
+  initProject: (name: string): Promise<ProjectState> =>
+    ipcRenderer.invoke('project:init', name),
+  isInitialized: (): Promise<boolean> => ipcRenderer.invoke('project:is-initialized'),
+
+  // Task CRUD
+  createTask: (task: Task): Promise<void> => ipcRenderer.invoke('task:create', task),
+  readTask: (taskId: string): Promise<Task> => ipcRenderer.invoke('task:read', taskId),
+  updateTask: (task: Task): Promise<void> => ipcRenderer.invoke('task:update', task),
+  deleteTask: (taskId: string): Promise<void> => ipcRenderer.invoke('task:delete', taskId),
+
+  // Document
+  readTaskDocument: (taskId: string): Promise<string> =>
+    ipcRenderer.invoke('task:read-document', taskId),
+  writeTaskDocument: (taskId: string, content: string): Promise<void> =>
+    ipcRenderer.invoke('task:write-document', taskId, content),
+
+  // Activity
+  readTaskActivity: (taskId: string): Promise<ActivityEntry[]> =>
+    ipcRenderer.invoke('task:read-activity', taskId),
+  appendActivity: (taskId: string, entry: ActivityEntry): Promise<void> =>
+    ipcRenderer.invoke('task:append-activity', taskId, entry),
+
+  // Attachments
+  saveAttachment: (taskId: string, fileName: string, data: ArrayBuffer): Promise<string> =>
+    ipcRenderer.invoke('task:save-attachment', taskId, fileName, data),
 
   // PTY operations
   ptyCreate: (taskId: string, paneId: string, cwd: string): Promise<string> =>
@@ -31,10 +58,31 @@ const api = {
   tmuxAttach: (name: string): Promise<void> => ipcRenderer.invoke('tmux:attach', name),
   tmuxDetach: (name: string): Promise<void> => ipcRenderer.invoke('tmux:detach', name),
 
-  // Notification operations (to be implemented)
-  // notify: (title: string, body: string) => ipcRenderer.invoke('notification:send', title, body),
+  // Notifications
+  sendNotification: (title: string, body: string): Promise<void> =>
+    ipcRenderer.invoke('notification:send', title, body),
 
-  // Placeholder version info
+  // Window
+  openDirectory: (): Promise<string | null> => ipcRenderer.invoke('window:open-directory'),
+  onExternalTaskOpen: (callback: (taskId: string) => void): (() => void) => {
+    ipcRenderer.on('task:open-external', (_, taskId: string) => callback(taskId))
+    return () => {
+      ipcRenderer.removeAllListeners('task:open-external')
+    }
+  },
+
+  // File watching
+  watchProjectDir: (callback: () => void): (() => void) => {
+    ipcRenderer.on('project:file-changed', () => callback())
+    return () => {
+      ipcRenderer.removeAllListeners('project:file-changed')
+    }
+  },
+  unwatchProjectDir: (): void => {
+    ipcRenderer.send('project:unwatch')
+  },
+
+  // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version')
 }
 

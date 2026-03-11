@@ -5,9 +5,19 @@ import { ElectronTmuxManager } from './platform/electron-tmux'
 import { ElectronPtyManager } from './platform/electron-pty'
 import { registerPtyHandlers } from './ipc/pty-handlers'
 import { registerTmuxHandlers } from './ipc/tmux-handlers'
+import { registerFileHandlers } from './ipc/file-handlers'
+import { registerNotificationHandlers } from './ipc/notification-handlers'
+import { registerWindowHandlers } from './ipc/window-handlers'
+import { DataService } from './services/data-service'
+import { FileWatcher } from './services/file-watcher'
 
 const tmuxManager = new ElectronTmuxManager()
 const ptyManager = new ElectronPtyManager(tmuxManager)
+let fileWatcher: FileWatcher | null = null
+
+// Default project root to the current working directory
+const projectRoot = process.cwd()
+const dataService = new DataService(projectRoot)
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -26,6 +36,10 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+
+    // Start file watcher after window is ready
+    fileWatcher = new FileWatcher(projectRoot, mainWindow)
+    fileWatcher.start()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -41,9 +55,12 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  // Register IPC handlers for PTY and tmux
+  // Register IPC handlers
   registerPtyHandlers(ptyManager, mainWindow)
   registerTmuxHandlers(tmuxManager)
+  registerFileHandlers(dataService)
+  registerNotificationHandlers()
+  registerWindowHandlers(mainWindow)
 }
 
 app.whenReady().then(() => {
@@ -72,4 +89,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  fileWatcher?.stop()
+  fileWatcher = null
 })
