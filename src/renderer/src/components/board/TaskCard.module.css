@@ -22,6 +22,14 @@
 .card:hover {
   background-color: var(--bg-elevated);
   border-color: var(--border-hover);
+  transform: scale(1.01);
+  box-shadow: var(--shadow-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover {
+    transform: none;
+  }
 }
 
 .cardSelected {

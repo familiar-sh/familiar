@@ -17,6 +17,7 @@ import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useBoardStore } from '@renderer/stores/board-store'
 import { useKeyboardNavigation } from '@renderer/hooks/useKeyboardNavigation'
+import { LoadingSpinner, EmptyState } from '@renderer/components/common'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
 import styles from './KanbanBoard.module.css'
@@ -201,7 +202,11 @@ export function KanbanBoard(): React.JSX.Element {
 
   // Loading state
   if (isLoading) {
-    return <div className={styles.loading}>Loading project...</div>
+    return (
+      <div className={styles.loading}>
+        <LoadingSpinner label="Loading project..." />
+      </div>
+    )
   }
 
   // No project state — show init screen

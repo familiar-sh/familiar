@@ -3,6 +3,9 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Task, TaskStatus } from '@shared/types'
 import { COLUMN_LABELS } from '@shared/constants'
+import { useContextMenu } from '@renderer/hooks/useContextMenu'
+import { ContextMenu } from '@renderer/components/common'
+import type { ContextMenuItem } from '@renderer/components/common'
 import { TaskCard } from './TaskCard'
 import styles from './KanbanColumn.module.css'
 
@@ -41,6 +44,7 @@ export function KanbanColumn({
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const contextMenu = useContextMenu()
 
   const { isOver, setNodeRef } = useDroppable({
     id: `column-${status}`,
@@ -90,10 +94,27 @@ export function KanbanColumn({
     }
   }, [newTaskTitle])
 
+  const columnContextItems: ContextMenuItem[] = [
+    {
+      label: 'Create task',
+      onClick: () => setIsCreating(true),
+      shortcut: 'C'
+    },
+    { label: '', onClick: () => {}, divider: true },
+    {
+      label: `Clear column (${tasks.length})`,
+      onClick: () => {
+        // This is a UI action - handled by parent
+      },
+      danger: tasks.length > 0
+    }
+  ]
+
   return (
     <div
       ref={setNodeRef}
       className={`${styles.column} ${isOver ? styles.columnDragOver : ''}`}
+      onContextMenu={contextMenu.open}
     >
       <div className={styles.header}>
         <span
@@ -130,7 +151,9 @@ export function KanbanColumn({
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className={`${styles.taskList} ${isOver ? styles.dropTarget : ''}`}>
           {tasks.length === 0 && !isCreating ? (
-            <div className={styles.empty}>No tasks</div>
+            <div className={styles.empty}>
+              <span style={{ opacity: 0.6 }}>No tasks</span>
+            </div>
           ) : (
             tasks.map((task, index) => (
               <TaskCard
@@ -144,6 +167,14 @@ export function KanbanColumn({
           )}
         </div>
       </SortableContext>
+
+      {contextMenu.isOpen && (
+        <ContextMenu
+          items={columnContextItems}
+          position={contextMenu.position}
+          onClose={contextMenu.close}
+        />
+      )}
     </div>
   )
 }

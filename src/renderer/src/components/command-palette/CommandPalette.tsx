@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import { Command } from 'cmdk'
 import { useUIStore } from '../../stores/ui-store'
 import { useTaskStore } from '../../stores/task-store'
@@ -24,21 +24,7 @@ export function CommandPalette(): JSX.Element | null {
   const addTask = useTaskStore((s) => s.addTask)
   const tasks = projectState?.tasks ?? []
 
-  // Global Cmd+K listener
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        toggleCommandPalette()
-      }
-    },
-    [toggleCommandPalette]
-  )
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
+  // Cmd+K is now handled by useGlobalShortcuts in App.tsx
 
   const handleClose = useCallback(() => {
     if (open) toggleCommandPalette()
@@ -164,7 +150,9 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'center',
