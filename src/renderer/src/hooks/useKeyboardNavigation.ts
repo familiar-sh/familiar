@@ -25,7 +25,7 @@ export function useKeyboardNavigation({
     taskDetailOpen
   } = useUIStore()
 
-  const { updateTask, deleteTask } = useTaskStore()
+  const { updateTask, deleteTask, deleteTasks } = useTaskStore()
   const { selectedTaskIds, clearSelection } = useBoardStore()
 
   const getFocusedTask = useCallback((): Task | undefined => {
@@ -163,9 +163,7 @@ export function useKeyboardNavigation({
             if (confirmed) {
               const idsToDelete = Array.from(selectedTaskIds)
               clearSelection()
-              for (const id of idsToDelete) {
-                deleteTask(id)
-              }
+              deleteTasks(idsToDelete)
             }
           } else {
             const task = getFocusedTask()
@@ -200,6 +198,7 @@ export function useKeyboardNavigation({
     closeTaskDetail,
     updateTask,
     deleteTask,
+    deleteTasks,
     getFocusedTask,
     onCreateTask,
     selectedTaskIds,

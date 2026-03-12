@@ -17,6 +17,7 @@ interface TaskStore {
   addTask: (title: string, options?: Partial<Task>) => Promise<Task>
   updateTask: (task: Task) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
+  deleteTasks: (taskIds: string[]) => Promise<void>
   moveTask: (taskId: string, newStatus: TaskStatus, newSortOrder: number) => Promise<void>
   reorderTask: (taskId: string, newSortOrder: number) => Promise<void>
 
@@ -199,6 +200,25 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
     // Update project state
     const newTasks = projectState.tasks.filter((t: Task) => t.id !== taskId)
+    const newState: ProjectState = { ...projectState, tasks: newTasks }
+    await window.api.writeProjectState(newState)
+    set({ projectState: newState })
+  },
+
+  deleteTasks: async (taskIds: string[]): Promise<void> => {
+    const { projectState } = get()
+    if (!projectState) throw new Error('Project not initialized')
+
+    const idSet = new Set(taskIds)
+
+    // Kill tmux sessions and delete task files for each
+    for (const taskId of taskIds) {
+      await killTmuxSessionsForTask(taskId)
+      await window.api.deleteTask(taskId)
+    }
+
+    // Update project state once with all tasks removed
+    const newTasks = projectState.tasks.filter((t: Task) => !idSet.has(t.id))
     const newState: ProjectState = { ...projectState, tasks: newTasks }
     await window.api.writeProjectState(newState)
     set({ projectState: newState })

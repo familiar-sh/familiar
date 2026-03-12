@@ -198,6 +198,32 @@ describe('useTaskStore', () => {
     })
   })
 
+  describe('deleteTasks', () => {
+    it('removes multiple tasks atomically', async () => {
+      const task1 = makeTask({ id: 'tsk_del1' })
+      const task2 = makeTask({ id: 'tsk_del2' })
+      const task3 = makeTask({ id: 'tsk_keep' })
+      const state = makeProjectState([task1, task2, task3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.deleteTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().deleteTasks(['tsk_del1', 'tsk_del2'])
+
+      const remaining = useTaskStore.getState().projectState!.tasks
+      expect(remaining).toHaveLength(1)
+      expect(remaining[0].id).toBe('tsk_keep')
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_del1')
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_del2')
+      // writeProjectState should be called only once (atomic)
+      expect(mockApi.writeProjectState).toHaveBeenCalledTimes(1)
+    })
+
+    it('throws when project not initialized', async () => {
+      await expect(useTaskStore.getState().deleteTasks(['tsk_x'])).rejects.toThrow('Project not initialized')
+    })
+  })
+
   describe('moveTask', () => {
     it('changes status and sort order', async () => {
       const task = makeTask({ status: 'todo', sortOrder: 0 })

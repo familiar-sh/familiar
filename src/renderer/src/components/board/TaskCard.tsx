@@ -65,7 +65,7 @@ export function TaskCard({
     data: { type: 'task', task, status: task.status }
   })
 
-  const { updateTask, deleteTask } = useTaskStore()
+  const { updateTask, deleteTask, deleteTasks } = useTaskStore()
   const projectLabels = useTaskStore((s) => s.projectState?.labels ?? [])
   const contextMenu = useContextMenu()
   const [priorityOpen, setPriorityOpen] = useState(false)
@@ -207,9 +207,7 @@ export function TaskCard({
       if (confirmed) {
         const idsToDelete = Array.from(selectedTaskIds)
         clearSelection()
-        for (const id of idsToDelete) {
-          deleteTask(id)
-        }
+        deleteTasks(idsToDelete)
       }
     } else {
       const confirmed = window.confirm(`Delete task "${task.title}"?`)
@@ -217,7 +215,7 @@ export function TaskCard({
         deleteTask(task.id)
       }
     }
-  }, [task, deleteTask, isMultiSelected, selectedTaskIds, clearSelection])
+  }, [task, deleteTask, deleteTasks, isMultiSelected, selectedTaskIds, clearSelection])
 
   const handleCopyId = useCallback(() => {
     navigator.clipboard.writeText(task.id)

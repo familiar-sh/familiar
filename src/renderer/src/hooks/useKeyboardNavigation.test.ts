@@ -301,8 +301,13 @@ describe('useKeyboardNavigation', () => {
     act(() => fireKey('Delete'))
     expect(window.confirm).toHaveBeenCalledWith('Delete 2 selected tasks?')
     await vi.waitFor(() => {
+      // deleteTasks calls deleteTask for each id, then updates state once
       expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_a')
       expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_b')
+      // Both tasks should be removed from state
+      const remaining = useTaskStore.getState().projectState!.tasks
+      expect(remaining.find((t) => t.id === 'tsk_a')).toBeUndefined()
+      expect(remaining.find((t) => t.id === 'tsk_b')).toBeUndefined()
     })
     // Selection should be cleared
     expect(useBoardStore.getState().selectedTaskIds.size).toBe(0)
