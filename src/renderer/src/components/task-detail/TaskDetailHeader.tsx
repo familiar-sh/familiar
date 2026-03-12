@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Task, TaskStatus, Priority } from '@shared/types'
 import { formatRelativeTime } from '@renderer/lib/format-time'
+import { Tooltip } from '@renderer/components/common'
 import { StatusSelect } from './StatusSelect'
 import { PrioritySelect } from './PrioritySelect'
 import styles from './TaskDetailHeader.module.css'
@@ -104,9 +105,11 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
           <span>Created {formatRelativeTime(task.createdAt)}</span>
           <span>Updated {formatRelativeTime(task.updatedAt)}</span>
         </div>
-        <button className={styles.closeButton} onClick={onClose} title="Close (Esc)">
-          &#x2715;
-        </button>
+        <Tooltip placement="bottom" content="Back to dashboard (Esc)">
+          <button className={styles.closeButton} onClick={onClose}>
+            &#x2715;
+          </button>
+        </Tooltip>
       </div>
 
       <div className={styles.titleRow}>
