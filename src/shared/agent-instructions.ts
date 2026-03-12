@@ -12,12 +12,9 @@ documents, and activity for an agentic coding workflow.
 
 The environment variable \`FAMILIAR_TASK_ID\` contains the ID of the task you are
 working on. The variable \`FAMILIAR_PROJECT_ROOT\` points to the workspace root.
-The variable \`FAMILIAR_SETTINGS_PATH\` points to the project settings file.
-
 \`\`\`bash
 echo $FAMILIAR_TASK_ID        # e.g. tsk_a1b2c3d4
 echo $FAMILIAR_PROJECT_ROOT   # e.g. /Users/me/myproject
-echo $FAMILIAR_SETTINGS_PATH  # e.g. /Users/me/myproject/.familiar/settings.json
 \`\`\`
 
 ## CLI — \`familiar\`
@@ -25,19 +22,7 @@ echo $FAMILIAR_SETTINGS_PATH  # e.g. /Users/me/myproject/.familiar/settings.json
 Use the \`familiar\` CLI to interact with the system. All commands operate
 on the \`.familiar/\` directory in the project root.
 
-### Read project settings
-
-**Before starting any work**, read the project settings file to check for enabled behaviors:
-
-\`\`\`bash
-cat "$FAMILIAR_SETTINGS_PATH" 2>/dev/null || echo "{}"
-\`\`\`
-
-Check for these settings and obey them:
-
-| Setting | Effect |
-|---------|--------|
-| \`simplifyTaskTitles\` | If \`true\`, simplify the task title to a short descriptive name (3-6 words) and move the original verbose title/prompt into the task document (\`document.md\`) as context. Use \`familiar update $FAMILIAR_TASK_ID --title "Short title"\` to update the title. |
+Run \`familiar agents\` to see the full agent workflow and any **active project settings** you must obey.
 
 ### Read your task
 
@@ -170,11 +155,7 @@ familiar status $FAMILIAR_TASK_ID in-progress
 familiar update $FAMILIAR_TASK_ID --agent-status running
 familiar log $FAMILIAR_TASK_ID "Starting work"
 
-# 2. Read settings and obey them
-cat "$FAMILIAR_SETTINGS_PATH" 2>/dev/null || echo "{}"
-# If simplifyTaskTitles is true: shorten the title and move the original to document.md
-
-# 3. Read the task document and classify it
+# 2. Read the task document and classify it
 cat .familiar/tasks/$FAMILIAR_TASK_ID/document.md
 familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, improvement, chore
 

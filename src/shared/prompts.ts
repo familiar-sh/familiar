@@ -236,32 +236,17 @@ When running inside a Familiar terminal, these environment variables are set:
 
 - \`FAMILIAR_TASK_ID\` — The ID of the current task
 - \`FAMILIAR_PROJECT_ROOT\` — The root directory of the project
-- \`FAMILIAR_SETTINGS_PATH\` — Path to the project settings file (\`.familiar/settings.json\`)
 
 ## Agent Workflow
 
-### 1. Read project settings
-
-**Before starting any work**, read the project settings to check for enabled behaviors:
-
-\`\`\`bash
-cat "$FAMILIAR_SETTINGS_PATH" 2>/dev/null || echo "{}"
-\`\`\`
-
-Obey these settings when present:
-
-| Setting | Effect |
-|---------|--------|
-| \`simplifyTaskTitles\` | If \`true\`, simplify the task title to a short descriptive name (3-6 words) and move the original verbose title/prompt into the task document (\`document.md\`) as context. Use \`familiar update $FAMILIAR_TASK_ID --title "Short title"\` to update the title. |
-
-### 2. Read your task
+### 1. Read your task
 
 \`\`\`bash
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/document.md"
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/task.json"
 \`\`\`
 
-### 3. Signal you're working
+### 2. Signal you're working
 
 \`\`\`bash
 familiar status $FAMILIAR_TASK_ID in-progress
@@ -269,7 +254,7 @@ familiar update $FAMILIAR_TASK_ID --agent-status running
 familiar log $FAMILIAR_TASK_ID "Starting work"
 \`\`\`
 
-### 4. Classify your task
+### 3. Classify your task
 
 After reading the task, add the appropriate label based on the title and description:
 
@@ -283,13 +268,13 @@ After reading the task, add the appropriate label based on the title and descrip
 familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, improvement, chore
 \`\`\`
 
-### 5. Log progress
+### 4. Log progress
 
 \`\`\`bash
 familiar log $FAMILIAR_TASK_ID "Implemented feature X — moving to tests"
 \`\`\`
 
-### 6. Commit your work
+### 5. Commit your work
 
 \`\`\`bash
 git add <changed-files>
@@ -298,7 +283,7 @@ git commit -m "feat: short description"
 
 Use conventional commit prefixes: \`feat:\`, \`fix:\`, \`refactor:\`, \`docs:\`, \`test:\`, \`chore:\`. Do NOT push unless explicitly asked.
 
-### 7. Signal completion
+### 6. Signal completion
 
 **Important:** Task status and agent status are independent. Only move the task to \`in-review\` if you are explicitly requesting human review. Setting \`--agent-status done\` does **not** automatically change the task's board column.
 

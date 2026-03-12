@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
-import { DATA_DIR, STATE_FILE, TASKS_DIR, DEFAULT_LABELS, DEFAULT_LABEL_COLOR } from '../../shared/constants'
+import { DATA_DIR, STATE_FILE, SETTINGS_FILE, TASKS_DIR, DEFAULT_LABELS, DEFAULT_LABEL_COLOR } from '../../shared/constants'
 import type { ProjectState, Task } from '../../shared/types'
+import type { ProjectSettings } from '../../shared/types/settings'
 
 // We test CLI commands by invoking their action handlers indirectly.
 // For init, we replicate the logic; for add/list/status/delete/update/log/import
@@ -20,10 +21,12 @@ import {
   readActivity,
   appendActivity,
   ensureTaskDir,
-  deleteTaskDir
+  deleteTaskDir,
+  readSettings
 } from '../lib/file-ops'
 import { createTask } from '../../shared/utils/task-utils'
 import { generateActivityId } from '../../shared/utils/id-generator'
+import { buildSettingsSection } from './agents'
 
 describe('CLI commands (via file-ops)', () => {
   let tmpDir: string
@@ -363,6 +366,43 @@ describe('CLI commands (via file-ops)', () => {
       }
 
       expect(parsed).toEqual(['Setup project', 'Add auth'])
+    })
+  })
+
+  describe('readSettings', () => {
+    it('returns empty object when settings file does not exist', async () => {
+      await runInit()
+      const settings = await readSettings(tmpDir)
+      expect(settings).toEqual({})
+    })
+
+    it('reads settings from file', async () => {
+      await runInit()
+      const settingsPath = path.join(tmpDir, DATA_DIR, SETTINGS_FILE)
+      const settings: ProjectSettings = { simplifyTaskTitles: true }
+      await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
+
+      const result = await readSettings(tmpDir)
+      expect(result.simplifyTaskTitles).toBe(true)
+    })
+  })
+
+  describe('buildSettingsSection', () => {
+    it('returns no-settings message when no settings are enabled', () => {
+      const section = buildSettingsSection({})
+      expect(section).toContain('No special settings are enabled')
+    })
+
+    it('returns no-settings message when simplifyTaskTitles is false', () => {
+      const section = buildSettingsSection({ simplifyTaskTitles: false })
+      expect(section).toContain('No special settings are enabled')
+    })
+
+    it('includes simplifyTaskTitles description when enabled', () => {
+      const section = buildSettingsSection({ simplifyTaskTitles: true })
+      expect(section).toContain('`simplifyTaskTitles` is ON')
+      expect(section).toContain('Simplify the task title')
+      expect(section).toContain('Active Settings')
     })
   })
 })

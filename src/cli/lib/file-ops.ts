@@ -4,6 +4,7 @@ import * as os from 'os'
 import {
   DATA_DIR,
   STATE_FILE,
+  SETTINGS_FILE,
   TASKS_DIR,
   TASK_FILE,
   ACTIVITY_FILE,
@@ -11,6 +12,7 @@ import {
   NOTIFICATIONS_FILE
 } from '../../shared/constants'
 import type { ProjectState, Task, ActivityEntry, AppNotification } from '../../shared/types'
+import type { ProjectSettings } from '../../shared/types/settings'
 
 /**
  * Find the project root by walking up from cwd looking for `.familiar/`.
@@ -37,6 +39,16 @@ export function getProjectRoot(): string {
 
 export function getDataPath(root: string): string {
   return path.join(root, DATA_DIR)
+}
+
+export async function readSettings(root: string): Promise<ProjectSettings> {
+  const filePath = path.join(getDataPath(root), SETTINGS_FILE)
+  try {
+    const raw = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(raw) as ProjectSettings
+  } catch {
+    return {}
+  }
 }
 
 function getStatePath(root: string): string {
