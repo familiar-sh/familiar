@@ -135,6 +135,83 @@ test -f .familiar/state.json && echo "OK: state.json exists" || echo "WARN: stat
 [ -n "$FAMILIAR_PROJECT_ROOT" ] && echo "OK: FAMILIAR_PROJECT_ROOT=$FAMILIAR_PROJECT_ROOT" || echo "INFO: FAMILIAR_PROJECT_ROOT not set"
 \`\`\`
 
+### 5. AI agent hooks
+
+Ask the user which AI agent they are using (e.g. Claude Code, Gemini CLI, Codex, Aider, etc.), then check if the appropriate hooks are configured. Hooks automatically set the agent status to "running" when the user sends a message and "idle" when the agent finishes responding.
+
+#### Claude Code hooks
+
+Claude Code uses \`.claude/settings.json\` for hook configuration. Check and set up:
+
+\`\`\`bash
+# Check if .claude/settings.json exists with hooks
+test -f .claude/settings.json && echo "OK: .claude/settings.json exists" || echo "WARN: .claude/settings.json not found"
+
+# Check if hook scripts exist
+test -x .claude/hooks/on-prompt-submit.sh && echo "OK: on-prompt-submit.sh exists and is executable" || echo "WARN: on-prompt-submit.sh missing or not executable"
+test -x .claude/hooks/on-stop.sh && echo "OK: on-stop.sh exists and is executable" || echo "WARN: on-stop.sh missing or not executable"
+\`\`\`
+
+If hooks are missing, create them:
+
+1. Create \`.claude/settings.json\`:
+\`\`\`json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\\"$CLAUDE_PROJECT_DIR\\"/.claude/hooks/on-prompt-submit.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\\"$CLAUDE_PROJECT_DIR\\"/.claude/hooks/on-stop.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
+\`\`\`
+
+2. Create \`.claude/hooks/on-prompt-submit.sh\`:
+\`\`\`bash
+#!/bin/bash
+if [ -n "$FAMILIAR_TASK_ID" ] && command -v familiar >/dev/null 2>&1; then
+  familiar status "$FAMILIAR_TASK_ID" in-progress 2>/dev/null
+  familiar update "$FAMILIAR_TASK_ID" --agent-status running 2>/dev/null
+fi
+exit 0
+\`\`\`
+
+3. Create \`.claude/hooks/on-stop.sh\`:
+\`\`\`bash
+#!/bin/bash
+if [ -n "$FAMILIAR_TASK_ID" ] && command -v familiar >/dev/null 2>&1; then
+  familiar update "$FAMILIAR_TASK_ID" --agent-status idle 2>/dev/null
+  familiar notify "Agent Stopped" "Task $FAMILIAR_TASK_ID — agent is now idle" 2>/dev/null
+fi
+exit 0
+\`\`\`
+
+4. Make scripts executable: \`chmod +x .claude/hooks/on-prompt-submit.sh .claude/hooks/on-stop.sh\`
+
+#### Other agents
+
+For other AI agents, check their documentation for lifecycle hooks or event callbacks. The key integration points are:
+- **On user message**: run \`familiar update $FAMILIAR_TASK_ID --agent-status running\`
+- **On agent stop**: run \`familiar update $FAMILIAR_TASK_ID --agent-status idle\`
+
 ## Report format
 
 After running all checks, summarize:
