@@ -226,13 +226,15 @@ export function TaskCard({
           {hasUnread && <span className={styles.notificationDot} title="Has notifications" />}
         </div>
 
-        <div className={styles.bottomRow}>
-          {task.labels.map((label) => (
-            <span key={label} className={styles.label}>
-              {label}
-            </span>
-          ))}
-        </div>
+        {task.labels.length > 0 && (
+          <div className={styles.bottomRow}>
+            {task.labels.map((label) => (
+              <span key={label} className={styles.label}>
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {contextMenu.isOpen && (

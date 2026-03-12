@@ -183,7 +183,6 @@
   align-items: center;
   gap: var(--space-1);
   flex-wrap: wrap;
-  min-height: 18px;
 }
 
 .label {
