@@ -66,6 +66,7 @@ declare global {
       openDirectory(): Promise<string | null>
       setProjectRoot(path: string): Promise<boolean>
       onExternalTaskOpen(callback: (taskId: string) => void): () => void
+      onMenuOpenWorkspace(callback: () => void): () => void
 
       // File watching
       watchProjectDir(callback: () => void): () => void

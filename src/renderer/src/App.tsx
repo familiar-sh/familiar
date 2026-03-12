@@ -35,6 +35,17 @@ function App(): React.JSX.Element {
     }
   }, [loadProjectState, loadNotifications])
 
+  // Listen for "Open Workspace" from the application menu
+  const openWorkspace = useTaskStore((s) => s.openWorkspace)
+  useEffect(() => {
+    const unsubscribe = window.api.onMenuOpenWorkspace(() => {
+      openWorkspace()
+    })
+    return () => {
+      unsubscribe()
+    }
+  }, [openWorkspace])
+
   return (
     <>
       <Navbar />

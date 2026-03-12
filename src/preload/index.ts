@@ -90,6 +90,12 @@ const api = {
       ipcRenderer.removeAllListeners('task:open-external')
     }
   },
+  onMenuOpenWorkspace: (callback: () => void): (() => void) => {
+    ipcRenderer.on('menu:open-workspace', () => callback())
+    return () => {
+      ipcRenderer.removeAllListeners('menu:open-workspace')
+    }
+  },
 
   // File watching
   watchProjectDir: (callback: () => void): (() => void) => {
