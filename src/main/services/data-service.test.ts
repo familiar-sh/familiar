@@ -69,6 +69,98 @@ describe('DataService', () => {
     })
   })
 
+  describe('label sanitization on read', () => {
+    it('migrates plain string labels to LabelConfig objects', async () => {
+      await service.initProject('Test')
+      // Write raw state with string labels
+      const stateFile = path.join(tmpDir, '.familiar', 'state.json')
+      const state = JSON.parse(await fs.readFile(stateFile, 'utf-8'))
+      state.labels = ['bug', 'feature']
+      await fs.writeFile(stateFile, JSON.stringify(state))
+
+      const result = await service.readProjectState()
+      expect(result.labels).toEqual([
+        { name: 'bug', color: expect.any(String) },
+        { name: 'feature', color: expect.any(String) }
+      ])
+    })
+
+    it('fixes corrupted labels where name is an object', async () => {
+      await service.initProject('Test')
+      const stateFile = path.join(tmpDir, '.familiar', 'state.json')
+      const state = JSON.parse(await fs.readFile(stateFile, 'utf-8'))
+      state.labels = [
+        { name: 'bug', color: '#ef4444' },
+        { name: { name: 'feature', color: '#6b7280' }, color: '#6b7280' }
+      ]
+      await fs.writeFile(stateFile, JSON.stringify(state))
+
+      const result = await service.readProjectState()
+      expect(result.labels).toEqual([
+        { name: 'bug', color: '#ef4444' },
+        { name: 'feature', color: '#6b7280' }
+      ])
+    })
+
+    it('deduplicates labels by name', async () => {
+      await service.initProject('Test')
+      const stateFile = path.join(tmpDir, '.familiar', 'state.json')
+      const state = JSON.parse(await fs.readFile(stateFile, 'utf-8'))
+      state.labels = [
+        { name: 'bug', color: '#ef4444' },
+        { name: 'bug', color: '#3b82f6' }
+      ]
+      await fs.writeFile(stateFile, JSON.stringify(state))
+
+      const result = await service.readProjectState()
+      expect(result.labels).toHaveLength(1)
+      expect(result.labels[0]).toEqual({ name: 'bug', color: '#ef4444' })
+    })
+
+    it('handles mixed string and object labels', async () => {
+      await service.initProject('Test')
+      const stateFile = path.join(tmpDir, '.familiar', 'state.json')
+      const state = JSON.parse(await fs.readFile(stateFile, 'utf-8'))
+      state.labels = ['bug', { name: 'feature', color: '#3b82f6' }]
+      await fs.writeFile(stateFile, JSON.stringify(state))
+
+      const result = await service.readProjectState()
+      expect(result.labels).toHaveLength(2)
+      expect(result.labels[0].name).toBe('bug')
+      expect(result.labels[1]).toEqual({ name: 'feature', color: '#3b82f6' })
+    })
+  })
+
+  describe('label sanitization on write', () => {
+    it('strips labels with non-string names on write', async () => {
+      await service.initProject('Test')
+      const state = await service.readProjectState()
+      state.labels = [
+        { name: 'valid', color: '#ef4444' },
+        { name: { nested: true } as any, color: '#3b82f6' }
+      ]
+      await service.writeProjectState(state)
+
+      const stateFile = path.join(tmpDir, '.familiar', 'state.json')
+      const written = JSON.parse(await fs.readFile(stateFile, 'utf-8'))
+      expect(written.labels).toEqual([{ name: 'valid', color: '#ef4444' }])
+    })
+
+    it('deduplicates labels on write', async () => {
+      await service.initProject('Test')
+      const state = await service.readProjectState()
+      state.labels = [
+        { name: 'bug', color: '#ef4444' },
+        { name: 'bug', color: '#3b82f6' }
+      ]
+      await service.writeProjectState(state)
+
+      const stateFile = path.join(tmpDir, '.familiar', 'state.json')
+      const written = JSON.parse(await fs.readFile(stateFile, 'utf-8'))
+      expect(written.labels).toHaveLength(1)
+    })
+  })
+
   describe('isInitialized', () => {
     it('returns false before init', async () => {
       expect(await service.isInitialized()).toBe(false)

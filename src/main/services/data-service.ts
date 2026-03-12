@@ -60,14 +60,38 @@ export class DataService {
       }
     }
 
-    // Migrate: labels from string[] to LabelConfig[]
-    if (state.labels.length > 0 && typeof state.labels[0] === 'string') {
-      const oldLabels = state.labels as unknown as string[]
-      state.labels = oldLabels.map((name) => {
-        const defaultLabel = DEFAULT_LABELS.find((d) => d.name === name)
-        return { name, color: defaultLabel?.color ?? DEFAULT_LABEL_COLOR }
+    // Migrate & sanitize project labels
+    // Handles: plain strings, corrupted nested objects ({name: {name, color}}), and mixed arrays
+    if (state.labels.length > 0) {
+      const sanitized = state.labels.map((entry: any) => {
+        if (typeof entry === 'string') {
+          const defaultLabel = DEFAULT_LABELS.find((d) => d.name === entry)
+          return { name: entry, color: defaultLabel?.color ?? DEFAULT_LABEL_COLOR }
+        }
+        // Fix corrupted entries where name is an object instead of a string
+        if (entry && typeof entry.name === 'object' && entry.name !== null) {
+          const realName = typeof entry.name.name === 'string' ? entry.name.name : String(entry.name)
+          return { name: realName, color: entry.name.color ?? entry.color ?? DEFAULT_LABEL_COLOR }
+        }
+        // Already valid LabelConfig
+        if (entry && typeof entry.name === 'string' && typeof entry.color === 'string') {
+          return entry
+        }
+        return null
+      }).filter(Boolean)
+
+      // Deduplicate by name
+      const seen = new Set<string>()
+      const deduped = sanitized.filter((l: any) => {
+        if (seen.has(l.name)) return false
+        seen.add(l.name)
+        return true
       })
-      migrated = true
+
+      if (JSON.stringify(deduped) !== JSON.stringify(state.labels)) {
+        state.labels = deduped
+        migrated = true
+      }
     }
 
     if (migrated) {
@@ -87,6 +111,17 @@ export class DataService {
       if ((task.status as string) === 'cancelled') {
         task.status = 'archived'
       }
+    }
+
+    // Sanitize labels on write: ensure all names are strings, deduplicate
+    if (state.labels.length > 0) {
+      const seen = new Set<string>()
+      state.labels = state.labels.filter((l: any) => {
+        if (!l || typeof l.name !== 'string') return false
+        if (seen.has(l.name)) return false
+        seen.add(l.name)
+        return true
+      })
     }
 
     const filePath = this.getDataPath(STATE_FILE)
