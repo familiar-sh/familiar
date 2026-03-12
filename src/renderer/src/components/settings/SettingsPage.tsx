@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
-import type { ProjectSettings } from '@shared/types'
-import { DEFAULT_SETTINGS, DEFAULT_SNIPPETS } from '@shared/types/settings'
+import type { ProjectSettings, CodingAgent } from '@shared/types'
+import { DEFAULT_SETTINGS, DEFAULT_SNIPPETS, CODING_AGENT_LABELS } from '@shared/types/settings'
 import { DEFAULT_LABELS } from '@shared/constants'
 import { SnippetSettings } from './SnippetSettings'
 import { LabelSettings } from './LabelSettings'
@@ -133,6 +133,37 @@ export function SettingsPage(): React.JSX.Element {
                   />
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Coding Agent section */}
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Coding Agent</h2>
+
+            <div style={styles.settingRow}>
+              <div style={styles.settingInfo}>
+                <label style={styles.settingLabel}>Agent Harness</label>
+                <span style={styles.settingDescription}>
+                  The coding agent used in this project
+                </span>
+              </div>
+              <select
+                style={styles.textInput}
+                value={settings.codingAgent ?? ''}
+                onChange={(e) =>
+                  handleChange(
+                    'codingAgent',
+                    (e.target.value as CodingAgent) || undefined
+                  )
+                }
+              >
+                <option value="">Not configured</option>
+                {(Object.keys(CODING_AGENT_LABELS) as CodingAgent[]).map((key) => (
+                  <option key={key} value={key}>
+                    {CODING_AGENT_LABELS[key]}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

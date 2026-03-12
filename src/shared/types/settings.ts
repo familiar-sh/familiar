@@ -15,6 +15,13 @@ export interface Snippet {
   showIconInTerminal?: boolean
 }
 
+export type CodingAgent = 'claude-code' | 'other'
+
+export const CODING_AGENT_LABELS: Record<CodingAgent, string> = {
+  'claude-code': 'Claude Code',
+  other: 'Other'
+}
+
 export interface ProjectSettings {
   /** Command to run in the tmux session when a task terminal is first created */
   defaultCommand?: string
@@ -24,6 +31,10 @@ export interface ProjectSettings {
   simplifyTaskTitles?: boolean
   /** Project label definitions (name, color, description) */
   labels?: import('./board').LabelConfig[]
+  /** Selected coding agent harness (set during onboarding) */
+  codingAgent?: CodingAgent
+  /** Whether to skip the doctor check during onboarding */
+  skipDoctor?: boolean
 }
 
 export const DEFAULT_SNIPPETS: Snippet[] = [

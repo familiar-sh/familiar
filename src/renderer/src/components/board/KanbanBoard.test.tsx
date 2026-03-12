@@ -17,7 +17,9 @@ const mockApi = {
   writeProjectState: vi.fn().mockResolvedValue(undefined),
   readTaskDocument: vi.fn().mockResolvedValue(''),
   cliCheckAvailable: vi.fn().mockResolvedValue(true),
-  cliInstallToPath: vi.fn().mockResolvedValue({ success: true, shell: 'zsh' })
+  cliInstallToPath: vi.fn().mockResolvedValue({ success: true, shell: 'zsh' }),
+  readSettings: vi.fn().mockResolvedValue({ codingAgent: 'claude-code' }),
+  writeSettings: vi.fn().mockResolvedValue(undefined)
 }
 
 ;(window as any).api = mockApi
@@ -70,11 +72,11 @@ describe('KanbanBoard', () => {
     expect(screen.getByText('Loading project...')).toBeInTheDocument()
   })
 
-  it('renders open workspace screen when no project state', () => {
+  it('renders onboarding screen when no project state', () => {
     useTaskStore.setState({ isLoading: false, projectState: null })
     render(<KanbanBoard />)
-    expect(screen.getByText('Familiar')).toBeInTheDocument()
-    expect(screen.getByText('Open Workspace')).toBeInTheDocument()
+    expect(screen.getByText('Welcome to Familiar')).toBeInTheDocument()
+    expect(screen.getByText('Open Folder')).toBeInTheDocument()
   })
 
   it('renders all 5 columns', () => {

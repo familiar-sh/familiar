@@ -26,6 +26,7 @@ import { useBoardStore } from '@renderer/stores/board-store'
 import { useKeyboardNavigation } from '@renderer/hooks/useKeyboardNavigation'
 import { useMarqueeSelection } from '@renderer/hooks/useMarqueeSelection'
 import { LoadingSpinner } from '@renderer/components/common'
+import { Onboarding } from '@renderer/components/onboarding'
 import { KanbanColumn } from './KanbanColumn'
 import type { PendingImage, PendingPastedFile } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
@@ -54,6 +55,27 @@ export function KanbanBoard(): React.JSX.Element {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [dragSourceColumn, setDragSourceColumn] = useState<TaskStatus | null>(null)
   const [createColumnIndex, setCreateColumnIndex] = useState<number | null>(null)
+
+  // Onboarding: track whether we need to show the onboarding wizard
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null) // null = not checked yet
+
+  // Check if onboarding is needed when project state changes
+  useEffect(() => {
+    if (!projectState) {
+      setNeedsOnboarding(true)
+      return
+    }
+    // Project is loaded — check if coding agent has been configured
+    window.api
+      .readSettings()
+      .then((settings) => {
+        setNeedsOnboarding(!settings.codingAgent)
+      })
+      .catch(() => {
+        setNeedsOnboarding(false)
+      })
+  }, [projectState])
 
   // Drop indicator: tracks where the card would land.
   // Uses state for rendering but avoids DOM-changing updates that cause
@@ -502,7 +524,17 @@ export function KanbanBoard(): React.JSX.Element {
     )
   }
 
-  // No project state — show open workspace screen
+  // Show onboarding wizard when needed (first launch or agent not configured)
+  if (needsOnboarding && !onboardingDismissed) {
+    return (
+      <Onboarding
+        hasProject={!!projectState}
+        onComplete={() => setOnboardingDismissed(true)}
+      />
+    )
+  }
+
+  // No project state and onboarding was dismissed — fallback open workspace
   if (!projectState) {
     return (
       <div className={styles.emptyProject}>
