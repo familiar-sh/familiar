@@ -138,6 +138,19 @@ export function TaskCard({
       : hasUnread
 
   const contextMenuItems: ContextMenuItem[] = [
+    ...(hasUnreadInSelection
+      ? [
+          {
+            label:
+              isMultiSelected && selectedTaskIds.size > 1
+                ? `Mark ${selectedTaskIds.size} as Read`
+                : 'Mark as Read',
+            onClick: handleMarkAsRead,
+            shortcut: 'R'
+          },
+          { label: '', onClick: () => {}, divider: true } as ContextMenuItem
+        ]
+      : []),
     {
       label: 'Move to Todo',
       onClick: () => handleStatusChange('todo'),
@@ -175,19 +188,6 @@ export function TaskCard({
       shortcut: '4'
     },
     { label: '', onClick: () => {}, divider: true },
-    ...(hasUnreadInSelection
-      ? [
-          {
-            label:
-              isMultiSelected && selectedTaskIds.size > 1
-                ? `Mark ${selectedTaskIds.size} as Read`
-                : 'Mark as Read',
-            onClick: handleMarkAsRead,
-            shortcut: ''
-          },
-          { label: '', onClick: () => {}, divider: true } as ContextMenuItem
-        ]
-      : []),
     {
       label: 'Copy ID',
       onClick: handleCopyId,

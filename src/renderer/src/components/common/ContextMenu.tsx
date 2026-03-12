@@ -59,6 +59,19 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps): Rea
           onClose()
           break
         }
+        default: {
+          // Handle shortcut keys (single character)
+          const key = e.key.toLowerCase()
+          const match = actionItems.find(
+            (item) => item.shortcut && item.shortcut.toLowerCase() === key
+          )
+          if (match) {
+            e.preventDefault()
+            match.onClick()
+            onClose()
+          }
+          break
+        }
       }
     }
 
