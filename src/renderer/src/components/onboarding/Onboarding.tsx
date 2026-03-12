@@ -849,8 +849,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     cursor: 'pointer',
-    transition: 'background-color 150ms ease',
-    marginTop: '4px'
+    transition: 'background-color 150ms ease'
   },
   checkboxLabel: {
     display: 'flex',
@@ -1094,6 +1093,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   doctorActions: {
     display: 'flex',
+    alignItems: 'center',
     gap: '12px',
     marginTop: '4px'
   }
