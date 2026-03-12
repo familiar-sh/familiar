@@ -258,6 +258,21 @@ export class ElectronPtyManager implements IPtyManager {
           this._tmux.sendKeys(tmuxSessionName, settings.defaultCommand).catch((err) => {
             console.warn('Failed to send default command:', err)
           })
+
+          // Auto-rename the Claude session so `--resume $KANBAN_TASK_ID` works on restart.
+          // On the first launch, --resume fails (no session by that name) and Claude starts
+          // fresh via the fallback. We send `/rename <taskId>` after a delay so the session
+          // gets a predictable name that --resume can find later.
+          const isClaudeCommand = settings.defaultCommand.includes('claude')
+          if (isClaudeCommand) {
+            setTimeout(() => {
+              this._tmux
+                .sendKeys(tmuxSessionName, `/rename ${taskId}`)
+                .catch((err) => {
+                  console.warn('Failed to send /rename command:', err)
+                })
+            }, 5000)
+          }
         }
       }).catch(() => {
         // Settings not available — skip

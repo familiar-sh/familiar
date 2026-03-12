@@ -27,6 +27,7 @@ export const DEFAULT_SNIPPETS: Snippet[] = [
 ]
 
 export const DEFAULT_SETTINGS: ProjectSettings = {
-  defaultCommand: 'claude --dangerously-skip-permissions',
+  defaultCommand:
+    'claude --resume "$KANBAN_TASK_ID" --dangerously-skip-permissions 2>/dev/null || claude --dangerously-skip-permissions',
   snippets: DEFAULT_SNIPPETS
 }
