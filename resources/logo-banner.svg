@@ -4,63 +4,54 @@
       <stop offset="0%" stop-color="#0F0F23"/>
       <stop offset="100%" stop-color="#1A1A2E"/>
     </linearGradient>
-    <linearGradient id="iconBg" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#6366F1"/>
-      <stop offset="100%" stop-color="#8B5CF6"/>
-    </linearGradient>
     <linearGradient id="textGrad" x1="200" y1="60" x2="780" y2="140" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#E0E7FF"/>
       <stop offset="100%" stop-color="#C7D2FE"/>
-    </linearGradient>
-    <linearGradient id="cardFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.28)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0.12)"/>
     </linearGradient>
   </defs>
 
   <!-- Dark background -->
   <rect width="800" height="200" rx="16" fill="url(#bannerBg)"/>
 
-  <!-- Icon with kanban + familiar creature -->
-  <g transform="translate(20, 20)">
-    <rect width="160" height="160" rx="36" fill="url(#iconBg)"/>
-    <rect width="160" height="160" rx="36" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+  <!-- Logo icon -->
+  <g transform="translate(24, 16) scale(0.33)">
+    <!-- Tail: drawn first so board covers the base -->
+    <path d="M400 430 Q435 432 462 405 Q492 372 504 330 Q516 285 508 248 L496 250 Q504 288 494 330 Q484 372 460 398 Q442 416 424 418Z" fill="#7c3aed"/>
 
-    <!-- Kanban columns (top) -->
-    <rect x="16" y="18" width="30" height="14" rx="3" fill="url(#cardFill)"/>
-    <rect x="16" y="36" width="30" height="18" rx="3" fill="url(#cardFill)"/>
+    <!-- Board -->
+    <rect x="48" y="120" width="400" height="310" rx="44" fill="#7c3aed"/>
 
-    <rect x="52" y="18" width="36" height="16" rx="3" fill="url(#cardFill)"/>
-    <rect x="52" y="38" width="36" height="22" rx="3" fill="url(#cardFill)"/>
+    <!-- Columns -->
+    <rect x="104" y="180" width="80" height="140" rx="16" fill="rgba(255,255,255,0.26)"/>
+    <rect x="208" y="180" width="80" height="96" rx="16" fill="rgba(255,255,255,0.26)"/>
+    <rect x="312" y="180" width="80" height="166" rx="16" fill="rgba(255,255,255,0.26)"/>
 
-    <rect x="94" y="18" width="32" height="20" rx="3" fill="url(#cardFill)"/>
-    <rect x="94" y="42" width="32" height="12" rx="3" fill="rgba(255,255,255,0.4)"/>
+    <!-- Eyes -->
+    <circle cx="178" cy="114" r="44" fill="#7c3aed"/>
+    <circle cx="330" cy="114" r="44" fill="#7c3aed"/>
+    <circle cx="178" cy="114" r="30" fill="white"/>
+    <circle cx="330" cy="114" r="30" fill="white"/>
+    <circle cx="186" cy="117" r="16" fill="#4c1d95"/>
+    <circle cx="338" cy="117" r="16" fill="#4c1d95"/>
+    <circle cx="192" cy="112" r="7" fill="white"/>
+    <circle cx="344" cy="112" r="7" fill="white"/>
 
-    <!-- Familiar creature (geometric cat) — bottom half of icon -->
-    <g transform="translate(44, 72)">
-      <!-- Body -->
-      <ellipse cx="36" cy="52" rx="28" ry="20" fill="rgba(255,255,255,0.2)"/>
-      <!-- Head -->
-      <circle cx="36" cy="28" r="18" fill="rgba(255,255,255,0.2)"/>
-      <!-- Left ear -->
-      <polygon points="22,16 26,0 32,14" fill="rgba(255,255,255,0.2)"/>
-      <!-- Right ear -->
-      <polygon points="40,14 46,0 50,16" fill="rgba(255,255,255,0.2)"/>
-      <!-- Eyes -->
-      <rect x="27" y="24" width="5" height="5" rx="0.5" transform="rotate(45 29.5 26.5)" fill="#A78BFA"/>
-      <rect x="40" y="24" width="5" height="5" rx="0.5" transform="rotate(45 42.5 26.5)" fill="#A78BFA"/>
-      <!-- Tail -->
-      <path d="M64,52 Q80,40 74,24" stroke="rgba(255,255,255,0.2)" stroke-width="4" stroke-linecap="round" fill="none"/>
-    </g>
+    <!-- Horns -->
+    <circle cx="132" cy="90" r="22" fill="#7c3aed"/>
+    <circle cx="376" cy="90" r="22" fill="#7c3aed"/>
+
+    <!-- Hands -->
+    <ellipse cx="108" cy="122" rx="16" ry="11" fill="#a78bfa"/>
+    <ellipse cx="400" cy="122" rx="16" ry="11" fill="#a78bfa"/>
   </g>
 
   <!-- Text: Familiar -->
-  <text x="210" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="64" font-weight="700" letter-spacing="-2" fill="url(#textGrad)">
+  <text x="210" y="115" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="64" font-weight="700" letter-spacing="-2" fill="url(#textGrad)">
     Familiar
   </text>
 
   <!-- Tagline -->
-  <text x="214" y="150" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="16" font-weight="400" fill="rgba(167,139,250,0.7)">
-    Your AI agents, at your command
+  <text x="214" y="148" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="16" font-weight="400" fill="rgba(167,139,250,0.7)">
+    Orchestrate tens of coding agents in a Familiar Kanban Board
   </text>
 </svg>

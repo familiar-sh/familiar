@@ -1,51 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#6366F1"/>
-      <stop offset="100%" stop-color="#8B5CF6"/>
-    </linearGradient>
-    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0.12)"/>
-    </linearGradient>
-  </defs>
+  <!-- Tail: drawn first so board covers the base for smooth blend -->
+  <path d="M400 430 Q435 432 462 405 Q492 372 504 330 Q516 285 508 248 L496 250 Q504 288 494 330 Q484 372 460 398 Q442 416 424 418Z" fill="#7c3aed"/>
 
-  <!-- Background rounded square -->
-  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)"/>
-  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+  <!-- Board -->
+  <rect x="48" y="120" width="400" height="310" rx="44" fill="#7c3aed"/>
 
-  <!-- Kanban columns (top half) -->
-  <!-- Column 1 -->
-  <rect x="72" y="72" width="100" height="44" rx="10" fill="url(#card)"/>
-  <rect x="72" y="124" width="100" height="56" rx="10" fill="url(#card)"/>
-  <rect x="72" y="188" width="100" height="36" rx="10" fill="url(#card)"/>
+  <!-- Centered kanban columns -->
+  <rect x="104" y="180" width="80" height="140" rx="16" fill="rgba(255,255,255,0.26)"/>
+  <rect x="208" y="180" width="80" height="96" rx="16" fill="rgba(255,255,255,0.26)"/>
+  <rect x="312" y="180" width="80" height="166" rx="16" fill="rgba(255,255,255,0.26)"/>
 
-  <!-- Column 2 -->
-  <rect x="188" y="72" width="116" height="52" rx="10" fill="url(#card)"/>
-  <rect x="188" y="132" width="116" height="68" rx="10" fill="url(#card)"/>
+  <!-- Eyes peeking over top -->
+  <circle cx="178" cy="114" r="44" fill="#7c3aed"/>
+  <circle cx="330" cy="114" r="44" fill="#7c3aed"/>
+  <circle cx="178" cy="114" r="30" fill="white"/>
+  <circle cx="330" cy="114" r="30" fill="white"/>
+  <circle cx="186" cy="117" r="16" fill="#4c1d95"/>
+  <circle cx="338" cy="117" r="16" fill="#4c1d95"/>
+  <circle cx="192" cy="112" r="7" fill="white"/>
+  <circle cx="344" cy="112" r="7" fill="white"/>
 
-  <!-- Column 3 -->
-  <rect x="320" y="72" width="104" height="64" rx="10" fill="url(#card)"/>
-  <rect x="320" y="144" width="104" height="44" rx="10" fill="rgba(255,255,255,0.35)"/>
+  <!-- Round horns -->
+  <circle cx="132" cy="90" r="22" fill="#7c3aed"/>
+  <circle cx="376" cy="90" r="22" fill="#7c3aed"/>
 
-  <!-- Familiar creature (cat silhouette) — geometric, minimal -->
-  <g transform="translate(180, 268)">
-    <!-- Body — simple oval -->
-    <ellipse cx="76" cy="120" rx="52" ry="40" fill="rgba(255,255,255,0.22)"/>
-
-    <!-- Head — circle -->
-    <circle cx="76" cy="72" r="36" fill="rgba(255,255,255,0.22)"/>
-
-    <!-- Left ear — triangle -->
-    <polygon points="48,44 56,8 68,40" fill="rgba(255,255,255,0.22)"/>
-    <!-- Right ear — triangle -->
-    <polygon points="84,40 96,8 104,44" fill="rgba(255,255,255,0.22)"/>
-
-    <!-- Eyes — two glowing diamonds -->
-    <rect x="58" y="64" width="10" height="10" rx="1" transform="rotate(45 63 69)" fill="#A78BFA"/>
-    <rect x="84" y="64" width="10" height="10" rx="1" transform="rotate(45 89 69)" fill="#A78BFA"/>
-
-    <!-- Tail — curved line -->
-    <path d="M128,120 Q160,100 148,60" stroke="rgba(255,255,255,0.22)" stroke-width="8" stroke-linecap="round" fill="none"/>
-  </g>
+  <!-- Hands on top edge -->
+  <ellipse cx="108" cy="122" rx="16" ry="11" fill="#a78bfa"/>
+  <ellipse cx="400" cy="122" rx="16" ry="11" fill="#a78bfa"/>
 </svg>
