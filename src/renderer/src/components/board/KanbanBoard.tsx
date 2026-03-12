@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -16,7 +16,8 @@ import type {
   CollisionDetection
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import type { Task, TaskStatus } from '@shared/types'
+import type { Task, TaskStatus, Snippet } from '@shared/types'
+import { DEFAULT_SNIPPETS } from '@shared/types/settings'
 import { DEFAULT_COLUMNS } from '@shared/constants'
 import { filterTasks } from '@shared/utils/task-utils'
 import { useTaskStore } from '@renderer/stores/task-store'
@@ -59,6 +60,27 @@ export function KanbanBoard(): React.JSX.Element {
 
   // Ref mirror of dropIndicator for use in handleDragEnd (avoids stale closure)
   const dropIndicatorRef = useRef<DropIndicator | null>(null)
+
+  const [snippets, setSnippets] = useState<Snippet[]>(DEFAULT_SNIPPETS)
+
+  useEffect(() => {
+    async function loadSnippets(): Promise<void> {
+      try {
+        const settings = await window.api.readSettings()
+        if (settings.snippets && settings.snippets.length > 0) {
+          setSnippets(settings.snippets)
+        }
+      } catch {
+        // Use defaults
+      }
+    }
+    loadSnippets()
+  }, [])
+
+  const dashboardSnippets = useMemo(
+    () => snippets.filter((s) => s.showInDashboard),
+    [snippets]
+  )
 
   const columnOrder = projectState?.columnOrder ?? DEFAULT_COLUMNS
 
@@ -372,6 +394,7 @@ export function KanbanBoard(): React.JSX.Element {
               key={status}
               status={status}
               tasks={tasksByStatus[status] ?? []}
+              dashboardSnippets={dashboardSnippets}
               onTaskClick={handleTaskClick}
               onMultiSelect={handleMultiSelect}
               onCreateTask={(title) => handleCreateTask(status, title)}

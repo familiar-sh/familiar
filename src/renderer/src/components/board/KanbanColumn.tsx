@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import type { Task, TaskStatus } from '@shared/types'
+import type { Task, TaskStatus, Snippet } from '@shared/types'
 import { COLUMN_LABELS } from '@shared/constants'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { ContextMenu } from '@renderer/components/common'
@@ -25,6 +25,7 @@ interface KanbanColumnProps {
   showCreateInput?: boolean
   onCreateInputShown?: () => void
   headerAction?: React.ReactNode
+  dashboardSnippets?: Snippet[]
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
@@ -49,7 +50,8 @@ export function KanbanColumn({
   isFocusedColumn = false,
   showCreateInput = false,
   onCreateInputShown,
-  headerAction
+  headerAction,
+  dashboardSnippets = []
 }: KanbanColumnProps): React.JSX.Element {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [isCreating, setIsCreating] = useState(false)
@@ -175,6 +177,7 @@ export function KanbanColumn({
           isSelected={selectedTaskId === task.id}
           isMultiSelected={multiSelectedIds?.has(task.id) ?? false}
           isFocused={isFocusedColumn && focusedTaskIndex === i}
+          dashboardSnippets={dashboardSnippets}
         />
       )
     }
