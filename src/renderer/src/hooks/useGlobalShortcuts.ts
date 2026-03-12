@@ -13,6 +13,9 @@ export function useGlobalShortcuts(): void {
   const closeTaskDetail = useUIStore((s) => s.closeTaskDetail)
   const taskDetailOpen = useUIStore((s) => s.taskDetailOpen)
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen)
+  const openSettings = useUIStore((s) => s.openSettings)
+  const closeSettings = useUIStore((s) => s.closeSettings)
+  const settingsOpen = useUIStore((s) => s.settingsOpen)
   const addTask = useTaskStore((s) => s.addTask)
   const projectState = useTaskStore((s) => s.projectState)
 
@@ -56,10 +59,10 @@ export function useGlobalShortcuts(): void {
         return
       }
 
-      // Cmd+, — toggle sidebar
+      // Cmd+, — open settings
       if (meta && e.key === ',') {
         e.preventDefault()
-        toggleSidebar()
+        openSettings()
         return
       }
 
@@ -73,6 +76,11 @@ export function useGlobalShortcuts(): void {
         if (commandPaletteOpen) {
           e.preventDefault()
           toggleCommandPalette()
+          return
+        }
+        if (settingsOpen) {
+          e.preventDefault()
+          closeSettings()
           return
         }
         if (taskDetailOpen) {
@@ -91,6 +99,9 @@ export function useGlobalShortcuts(): void {
     closeTaskDetail,
     taskDetailOpen,
     commandPaletteOpen,
+    openSettings,
+    closeSettings,
+    settingsOpen,
     addTask,
     projectState,
     isInputFocused
