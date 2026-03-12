@@ -23,54 +23,23 @@ AI coding agents are powerful, but managing multiple agents across different tas
 
 ## Quick Start
 
-```bash
-# Install dependencies
-npm install
+1. Download the latest `.dmg` from [Releases](https://github.com/carlosbaraza/kanban-agent/releases)
+2. Open the app
+3. Create tasks, open terminals, and start your agents
 
-# Start the app in development mode
-npm run dev
-```
+The app includes a built-in CLI (`kanban-agent`) that gets installed automatically. If the CLI isn't detected, the app will prompt you to install it.
 
-## CLI
+## CLI (for agents)
 
-The CLI lets agents (or you) manage tasks from the terminal:
+The `kanban-agent` CLI is how AI agents manage their own tasks — updating status, logging progress, and sending notifications back to the board:
 
 ```bash
-# Initialize a project
-kanban-agent init
-
-# Create a task
+kanban-agent init                                    # Initialize .kanban-agent/ in a project
 kanban-agent add "Implement auth flow" --priority high
-
-# Update status
 kanban-agent status <task-id> in-progress
-
-# Log progress
 kanban-agent log <task-id> "Auth endpoint working, adding tests"
-
-# Send a notification
 kanban-agent notify "Done" "Auth flow complete"
-
-# List tasks
 kanban-agent list --status in-progress --json
-```
-
-### Install the CLI globally
-
-```bash
-npm run build:cli
-npm link
-```
-
-## Build
-
-```bash
-# Build the Electron app
-npm run build:app
-
-# Build for specific architecture
-npm run build:app:arm64   # Apple Silicon
-npm run build:app:x64     # Intel
 ```
 
 ## Architecture
@@ -104,13 +73,14 @@ CLI (standalone)
 | **CLI** | Commander.js + tsup |
 | **Tests** | Vitest + Testing Library + Playwright |
 
-## Contributing
+## Development
 
 ```bash
 npm install          # Install deps
 npm run dev          # Dev server with HMR
 npm test             # Run tests
 npm run typecheck    # Type checking
+npm run build:app    # Build the Electron app
 ```
 
 ## License
