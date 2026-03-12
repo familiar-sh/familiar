@@ -1,8 +1,7 @@
-import type { AgentStatus, TaskStatus } from '@shared/types'
+import type { AgentStatus } from '@shared/types'
 
 export interface AgentStatusBadgeProps {
   status: AgentStatus
-  taskStatus?: TaskStatus
   showLabel?: boolean
 }
 
@@ -18,17 +17,9 @@ const STATUS_CONFIG: Record<
 
 export function AgentStatusBadge({
   status,
-  taskStatus,
   showLabel = false
 }: AgentStatusBadgeProps): React.JSX.Element {
-  // Only show running/done colors when the task status matches; otherwise gray
-  let effectiveStatus = status
-  if (status === 'running' && taskStatus && taskStatus !== 'in-progress') {
-    effectiveStatus = 'idle'
-  } else if (status === 'done' && taskStatus && taskStatus !== 'done' && taskStatus !== 'in-review') {
-    effectiveStatus = 'idle'
-  }
-  const config = STATUS_CONFIG[effectiveStatus]
+  const config = STATUS_CONFIG[status]
 
   return (
     <span

@@ -6,6 +6,7 @@ import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { LucideIconByName } from '@renderer/components/terminal/IconPicker'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
+import { useProjectLabels } from '@renderer/hooks/useProjectLabels'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useBoardStore } from '@renderer/stores/board-store'
@@ -23,17 +24,6 @@ const AGENT_STATUS_COLORS: Record<AgentStatus, string> = {
   running: '#5e6ad2',
   done: '#27ae60',
   error: '#e74c3c'
-}
-
-/** Only show running/done colors when the task status matches; otherwise gray */
-function getAgentDotColor(agentStatus: AgentStatus, taskStatus: TaskStatus): string {
-  if (agentStatus === 'running' && taskStatus !== 'in-progress') {
-    return AGENT_STATUS_COLORS.idle
-  }
-  if (agentStatus === 'done' && taskStatus !== 'done' && taskStatus !== 'in-review') {
-    return AGENT_STATUS_COLORS.idle
-  }
-  return AGENT_STATUS_COLORS[agentStatus]
 }
 
 interface TaskCardProps {
@@ -70,7 +60,7 @@ export function TaskCard({
   })
 
   const { updateTask, deleteTask, deleteTasks } = useTaskStore()
-  const projectLabels = useTaskStore((s) => s.projectState?.labels ?? [])
+  const projectLabels = useProjectLabels()
   const contextMenu = useContextMenu()
   const [priorityOpen, setPriorityOpen] = useState(false)
   const priorityRef = useRef<HTMLButtonElement>(null)
@@ -392,8 +382,8 @@ export function TaskCard({
             <span className={styles.title} onClick={handleTitleClick}>{task.title}</span>
           )}
           <span
-            className={`${styles.agentDot}${task.agentStatus === 'running' && task.status === 'in-progress' ? ` ${styles.agentRunning}` : ''}`}
-            style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
+            className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
+            style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
             aria-label={`Agent: ${task.agentStatus}`}
           />
           {hasUnread && <span className={styles.notificationDot} aria-label="Has notifications" />}
@@ -527,8 +517,8 @@ export function TaskCardOverlay({
           <PriorityIcon priority={task.priority} size={14} />
           <span className={styles.title}>{task.title}</span>
           <span
-            className={`${styles.agentDot}${task.agentStatus === 'running' && task.status === 'in-progress' ? ` ${styles.agentRunning}` : ''}`}
-            style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
+            className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
+            style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
           />
         </div>
         <div className={styles.bottomRow}>
