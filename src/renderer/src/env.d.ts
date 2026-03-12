@@ -80,7 +80,7 @@ declare global {
       cliInstallToPath(): Promise<{ success: boolean; shell: string; error?: string }>
 
       // Shell
-      showInFolder(path: string): Promise<void>
+      openPath(path: string): Promise<string>
 
       // App info
       getVersion(): Promise<string>

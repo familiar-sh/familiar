@@ -35,7 +35,7 @@ export function registerWindowHandlers(
     return app.getVersion()
   })
 
-  ipcMain.handle('shell:show-in-folder', (_, path: string) => {
-    shell.showItemInFolder(path)
+  ipcMain.handle('shell:open-path', async (_, path: string) => {
+    return shell.openPath(path)
   })
 }

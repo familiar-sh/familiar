@@ -85,7 +85,7 @@ export function Navbar(): React.JSX.Element {
         <button
           className={styles.navButton}
           onClick={() => {
-            if (projectRoot) window.api.showInFolder(projectRoot)
+            if (projectRoot) window.api.openPath(projectRoot)
           }}
           title="Open in Finder"
         >
