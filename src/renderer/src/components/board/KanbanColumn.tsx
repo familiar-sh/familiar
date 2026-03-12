@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import type { Task, TaskStatus, Snippet } from '@shared/types'
+import type { Task, TaskStatus, Snippet, TaskPastedFile } from '@shared/types'
 import { COLUMN_LABELS } from '@shared/constants'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { ContextMenu } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
+import { isLargePaste, createPastedFileMeta } from '@renderer/lib/paste-utils'
 import type { DropIndicator } from './KanbanBoard'
 import { TaskCard } from './TaskCard'
 import styles from './KanbanColumn.module.css'
@@ -18,12 +19,18 @@ export interface PendingImage {
   dataUrl: string // for preview
 }
 
+/** A large pasted text pending task creation */
+export interface PendingPastedFile {
+  meta: TaskPastedFile
+  content: string
+}
+
 interface KanbanColumnProps {
   status: TaskStatus
   tasks: Task[]
   onTaskClick: (taskId: string) => void
   onMultiSelect: (taskId: string, append: boolean) => void
-  onCreateTask: (title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[]) => void
+  onCreateTask: (title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[], pendingPastedFiles?: PendingPastedFile[]) => void
   selectedTaskId?: string | null
   multiSelectedIds?: Set<string>
   draggedTaskId?: string | null
@@ -75,6 +82,7 @@ export function KanbanColumn({
     return new Set(allSnippets.map((_, i) => i))
   })
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
+  const [pendingPastedFiles, setPendingPastedFiles] = useState<PendingPastedFile[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const contextMenu = useContextMenu()
 
@@ -170,6 +178,7 @@ export function KanbanColumn({
 
   const handlePaste = useCallback(
     async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      // Check for image paste first
       const items = e.clipboardData.items
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
@@ -190,8 +199,16 @@ export function KanbanColumn({
           const dataUrl = `data:${mimeType};base64,${base64}`
 
           setPendingImages((prev) => [...prev, { tempPath, fileName, mimeType, dataUrl }])
-          break // Handle one image at a time
+          return
         }
+      }
+
+      // Check for large text paste
+      const text = e.clipboardData.getData('text/plain')
+      if (text && isLargePaste(text)) {
+        e.preventDefault()
+        const meta = createPastedFileMeta(text)
+        setPendingPastedFiles((prev) => [...prev, { meta, content: text }])
       }
     },
     []
@@ -203,7 +220,7 @@ export function KanbanColumn({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey && (newTaskTitle.trim() || pendingImages.length > 0)) {
+      if (e.key === 'Enter' && !e.shiftKey && (newTaskTitle.trim() || pendingImages.length > 0 || pendingPastedFiles.length > 0)) {
         e.preventDefault()
         const lines = newTaskTitle.trim().split('\n')
         const title = lines[0].trim() || 'Untitled'
@@ -213,14 +230,17 @@ export function KanbanColumn({
           title,
           document,
           enabled.length > 0 ? enabled : undefined,
-          pendingImages.length > 0 ? pendingImages : undefined
+          pendingImages.length > 0 ? pendingImages : undefined,
+          pendingPastedFiles.length > 0 ? pendingPastedFiles : undefined
         )
         updateDraft('')
         setPendingImages([])
+        setPendingPastedFiles([])
       }
       if (e.key === 'Escape') {
         updateDraft('')
         setPendingImages([])
+        setPendingPastedFiles([])
         if (!alwaysShowInput) {
           setIsCreating(false)
         }
@@ -240,7 +260,7 @@ export function KanbanColumn({
         }
       }
     },
-    [newTaskTitle, pendingImages, onCreateTask, alwaysShowInput, onInputExit, updateDraft, allSnippets, enabledSnippetIndices]
+    [newTaskTitle, pendingImages, pendingPastedFiles, onCreateTask, alwaysShowInput, onInputExit, updateDraft, allSnippets, enabledSnippetIndices]
   )
 
   const handleBlur = useCallback(() => {
@@ -370,6 +390,32 @@ export function KanbanColumn({
                     onClick={() => removePendingImage(i)}
                     type="button"
                     aria-label="Remove image"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {pendingPastedFiles.length > 0 && (
+            <div className={styles.pendingPastedFiles}>
+              {pendingPastedFiles.map((pf, i) => (
+                <div key={pf.meta.filename} className={styles.pendingPastedCard}>
+                  <div className={styles.pendingPastedInfo}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <span className={styles.pendingPastedLabel}>{pf.meta.label}</span>
+                    <span className={styles.pendingPastedMeta}>
+                      {pf.meta.lineCount} lines
+                    </span>
+                  </div>
+                  <button
+                    className={styles.pendingImageRemove}
+                    onClick={() => setPendingPastedFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    type="button"
+                    aria-label="Remove pasted file"
                   >
                     &times;
                   </button>

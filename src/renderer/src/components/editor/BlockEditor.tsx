@@ -1,6 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/mantine'
+import type { TaskPastedFile } from '@shared/types'
+import { useTaskStore } from '@renderer/stores/task-store'
+import { isLargePaste, createPastedFileMeta } from '@renderer/lib/paste-utils'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
 import styles from './BlockEditor.module.css'
@@ -9,12 +12,14 @@ interface BlockEditorProps {
   taskId: string
   initialContent?: string // markdown content
   onChange?: (markdown: string) => void
+  onPastedFileAdded?: (file: TaskPastedFile) => void
 }
 
-export function BlockEditor({ taskId, initialContent, onChange }: BlockEditorProps): React.JSX.Element {
+export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdded }: BlockEditorProps): React.JSX.Element {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const taskIdRef = useRef(taskId)
   const isLoadingContentRef = useRef(false)
+  const editorWrapperRef = useRef<HTMLDivElement>(null)
   taskIdRef.current = taskId
 
   const uploadFile = useCallback(
@@ -87,6 +92,36 @@ export function BlockEditor({ taskId, initialContent, onChange }: BlockEditorPro
     }, 1000)
   }, [editor, onChange])
 
+  // Intercept large pastes in the editor
+  useEffect(() => {
+    const wrapper = editorWrapperRef.current
+    if (!wrapper) return
+
+    const handlePaste = async (e: ClipboardEvent): Promise<void> => {
+      const text = e.clipboardData?.getData('text/plain')
+      if (!text || !isLargePaste(text)) return
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      const meta = createPastedFileMeta(text)
+      try {
+        await window.api.savePastedFile(taskIdRef.current, meta.filename, text)
+        const task = useTaskStore.getState().getTaskById(taskIdRef.current)
+        if (task) {
+          const pastedFiles = [...(task.pastedFiles ?? []), meta]
+          await useTaskStore.getState().updateTask({ ...task, pastedFiles })
+        }
+        onPastedFileAdded?.(meta)
+      } catch (err) {
+        console.warn('Failed to save pasted file from editor:', err)
+      }
+    }
+
+    wrapper.addEventListener('paste', handlePaste, { capture: true })
+    return () => wrapper.removeEventListener('paste', handlePaste, { capture: true })
+  }, [onPastedFileAdded])
+
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
@@ -97,7 +132,7 @@ export function BlockEditor({ taskId, initialContent, onChange }: BlockEditorPro
   }, [])
 
   return (
-    <div className={styles.editorWrapper} data-testid="block-editor">
+    <div ref={editorWrapperRef} className={styles.editorWrapper} data-testid="block-editor">
       <BlockNoteView
         editor={editor}
         theme="dark"

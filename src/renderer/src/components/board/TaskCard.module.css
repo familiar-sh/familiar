@@ -256,6 +256,30 @@
   font-weight: var(--font-weight-medium);
 }
 
+/* ---- Pasted file indicators ---- */
+
+.pastedFileIndicators {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+
+.pastedFileChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--bg-elevated);
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
 /* ---- Description preview + expanded editor ---- */
 
 .descriptionPreview {

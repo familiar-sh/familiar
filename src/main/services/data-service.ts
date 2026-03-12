@@ -190,6 +190,28 @@ export class DataService {
     return destPath
   }
 
+  // ─── Pasted Files ────────────────────────────────────────────────
+
+  async savePastedFile(
+    taskId: string,
+    filename: string,
+    content: string
+  ): Promise<void> {
+    const filePath = this.getDataPath(TASKS_DIR, taskId, filename)
+    await this.fs.writeFile(filePath, content)
+  }
+
+  async readPastedFile(taskId: string, filename: string): Promise<string> {
+    const filePath = this.getDataPath(TASKS_DIR, taskId, filename)
+    return this.fs.readFile(filePath)
+  }
+
+  async deletePastedFile(taskId: string, filename: string): Promise<void> {
+    const filePath = this.getDataPath(TASKS_DIR, taskId, filename)
+    const { unlink } = await import('fs/promises')
+    await unlink(filePath)
+  }
+
   // ─── Init ─────────────────────────────────────────────────────────
 
   async initProject(projectName: string): Promise<ProjectState> {

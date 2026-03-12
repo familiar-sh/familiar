@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import type { TaskPastedFile } from '@shared/types'
 import { SplitPanel } from './SplitPanel'
 import { ActivityTimeline } from './ActivityTimeline'
 import { TerminalPanel } from '@renderer/components/terminal/TerminalPanel'
 import { BlockEditor } from '@renderer/components/editor'
+import { PastedFileCard, PreviewDialog } from '@renderer/components/common'
 import { useUIStore } from '@renderer/stores/ui-store'
+import { useTaskStore } from '@renderer/stores/task-store'
 import styles from './TaskDetailContent.module.css'
 
 interface TaskDetailContentProps {
@@ -16,6 +19,25 @@ export function TaskDetailContent({ taskId, visible }: TaskDetailContentProps): 
   const setEditorPanelWidth = useUIStore((s) => s.setEditorPanelWidth)
   const [documentContent, setDocumentContent] = useState<string | undefined>(undefined)
   const [documentLoaded, setDocumentLoaded] = useState(false)
+  const [previewFile, setPreviewFile] = useState<TaskPastedFile | null>(null)
+
+  const task = useTaskStore((s) => s.getTaskById(taskId))
+  const updateTask = useTaskStore((s) => s.updateTask)
+  const pastedFiles = task?.pastedFiles ?? []
+
+  const handleRemovePastedFile = useCallback(
+    async (filename: string) => {
+      if (!task) return
+      try {
+        await window.api.deletePastedFile(taskId, filename)
+        const updated = (task.pastedFiles ?? []).filter((f) => f.filename !== filename)
+        await updateTask({ ...task, pastedFiles: updated.length > 0 ? updated : undefined })
+      } catch (err) {
+        console.warn('Failed to delete pasted file:', err)
+      }
+    },
+    [task, taskId, updateTask]
+  )
 
   // Load document content on mount / taskId change
   useEffect(() => {
@@ -61,6 +83,21 @@ export function TaskDetailContent({ taskId, visible }: TaskDetailContentProps): 
                 <div className={styles.editorArea}>Loading...</div>
               )}
             </div>
+            {pastedFiles.length > 0 && (
+              <div className={styles.pastedFilesSection}>
+                <div className={styles.pastedFilesHeader}>Pasted Files</div>
+                <div className={styles.pastedFilesList}>
+                  {pastedFiles.map((pf) => (
+                    <PastedFileCard
+                      key={pf.filename}
+                      file={pf}
+                      onClick={() => setPreviewFile(pf)}
+                      onRemove={() => handleRemovePastedFile(pf.filename)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <div className={styles.activitySection}>
               <ActivityTimeline taskId={taskId} />
             </div>
@@ -74,6 +111,13 @@ export function TaskDetailContent({ taskId, visible }: TaskDetailContentProps): 
         maxLeftWidth={800}
         onWidthChange={setEditorPanelWidth}
       />
+      {previewFile && (
+        <PreviewDialog
+          taskId={taskId}
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
     </div>
   )
 }

@@ -101,6 +101,7 @@ describe('KanbanColumn — snippet toggles', () => {
       'New task',
       undefined,
       [testSnippets[0]], // Only the first snippet (Start) should be enabled
+      undefined,
       undefined
     )
   })
@@ -125,7 +126,7 @@ describe('KanbanColumn — snippet toggles', () => {
     fireEvent.change(textarea, { target: { value: 'New task' } })
     fireEvent.keyDown(textarea, { key: 'Enter' })
 
-    expect(onCreateTask).toHaveBeenCalledWith('New task', undefined, undefined, undefined)
+    expect(onCreateTask).toHaveBeenCalledWith('New task', undefined, undefined, undefined, undefined)
   })
 })
 

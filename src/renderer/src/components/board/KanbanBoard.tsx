@@ -27,7 +27,7 @@ import { useKeyboardNavigation } from '@renderer/hooks/useKeyboardNavigation'
 import { useMarqueeSelection } from '@renderer/hooks/useMarqueeSelection'
 import { LoadingSpinner } from '@renderer/components/common'
 import { KanbanColumn } from './KanbanColumn'
-import type { PendingImage } from './KanbanColumn'
+import type { PendingImage, PendingPastedFile } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
 import { CliSetupBanner } from './CliSetupBanner'
 import styles from './KanbanBoard.module.css'
@@ -214,7 +214,7 @@ export function KanbanBoard(): React.JSX.Element {
   )
 
   const handleCreateTask = useCallback(
-    async (status: TaskStatus, title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[]) => {
+    async (status: TaskStatus, title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[], pendingPastedFiles?: PendingPastedFile[]) => {
       const task = await addTask(title, { status })
       if (document) {
         await window.api.writeTaskDocument(task.id, document)
@@ -233,6 +233,22 @@ export function KanbanBoard(): React.JSX.Element {
         if (attachmentPaths.length > 0) {
           const { updateTask } = useTaskStore.getState()
           await updateTask({ ...task, attachments: attachmentPaths })
+        }
+      }
+      // Save pasted files to task folder
+      if (pendingPastedFiles && pendingPastedFiles.length > 0) {
+        const pastedFiles = [...(task.pastedFiles ?? [])]
+        for (const pf of pendingPastedFiles) {
+          try {
+            await window.api.savePastedFile(task.id, pf.meta.filename, pf.content)
+            pastedFiles.push(pf.meta)
+          } catch {
+            console.warn('Failed to save pasted file:', pf.meta.filename)
+          }
+        }
+        if (pastedFiles.length > 0) {
+          const { updateTask } = useTaskStore.getState()
+          await updateTask({ ...task, pastedFiles })
         }
       }
       // Auto-run enabled snippets 5 seconds after creation
@@ -473,7 +489,7 @@ export function KanbanBoard(): React.JSX.Element {
               allSnippets={snippets}
               onTaskClick={handleTaskClick}
               onMultiSelect={handleMultiSelect}
-              onCreateTask={(title, document, enabledSnippets, pendingImages) => handleCreateTask(status, title, document, enabledSnippets, pendingImages)}
+              onCreateTask={(title, document, enabledSnippets, pendingImages, pendingPastedFiles) => handleCreateTask(status, title, document, enabledSnippets, pendingImages, pendingPastedFiles)}
               selectedTaskId={activeTaskId}
               multiSelectedIds={selectedTaskIds}
               draggedTaskId={activeTask?.id ?? null}

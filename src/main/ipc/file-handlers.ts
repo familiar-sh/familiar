@@ -76,6 +76,17 @@ export function registerFileHandlers(
       )
   )
 
+  // Pasted files
+  ipcMain.handle('task:save-pasted-file', async (_, taskId: string, filename: string, content: string) =>
+    withSelfTriggered(getFileWatcher, () => dataService.savePastedFile(taskId, filename, content))
+  )
+  ipcMain.handle('task:read-pasted-file', async (_, taskId: string, filename: string) =>
+    dataService.readPastedFile(taskId, filename)
+  )
+  ipcMain.handle('task:delete-pasted-file', async (_, taskId: string, filename: string) =>
+    withSelfTriggered(getFileWatcher, () => dataService.deletePastedFile(taskId, filename))
+  )
+
   ipcMain.handle('settings:read', async () => dataService.readSettings())
   ipcMain.handle('settings:write', async (_, settings) =>
     withSelfTriggered(getFileWatcher, () => dataService.writeSettings(settings))

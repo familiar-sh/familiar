@@ -61,3 +61,7 @@ export const SETTINGS_FILE = 'settings.json'
 export const NOTIFICATIONS_FILE = 'notifications.json'
 
 export const APP_NAME = 'Familiar'
+
+// Paste extraction thresholds
+export const PASTE_LINE_THRESHOLD = 10
+export const PASTE_CHAR_THRESHOLD = 1000
