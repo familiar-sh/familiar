@@ -97,6 +97,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  -webkit-app-region: no-drag;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -209,6 +210,7 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+  -webkit-app-region: no-drag;
 }
 
 .helpDropdownItem {
