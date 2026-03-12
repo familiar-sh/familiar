@@ -131,6 +131,16 @@
   border-radius: var(--radius-md);
 }
 
+/* ---- Drop position indicator (thin accent bar) ---- */
+
+.dropIndicator {
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--accent);
+  margin: 1px 0;
+  flex-shrink: 0;
+}
+
 /* ---- Empty state ---- */
 
 .empty {

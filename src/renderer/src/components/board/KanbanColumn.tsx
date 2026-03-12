@@ -1,30 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Task, TaskStatus } from '@shared/types'
 import { COLUMN_LABELS } from '@shared/constants'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { ContextMenu } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
+import type { DropIndicator } from './KanbanBoard'
 import { TaskCard } from './TaskCard'
 import styles from './KanbanColumn.module.css'
-
-/** Minimal sortable placeholder for a dragged item in the target column.
- *  Registers with dnd-kit so transforms/gap work, but renders as a thin bar. */
-function SortablePlaceholder({ id }: { id: string }): React.JSX.Element {
-  const { setNodeRef, transform, transition } = useSortable({ id })
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: 'var(--accent)',
-    opacity: 0.6,
-    margin: '2px 0'
-  }
-  return <div ref={setNodeRef} style={style} />
-}
 
 interface KanbanColumnProps {
   status: TaskStatus
@@ -35,6 +19,7 @@ interface KanbanColumnProps {
   selectedTaskId?: string | null
   multiSelectedIds?: Set<string>
   draggedTaskId?: string | null
+  dropIndicator?: DropIndicator | null
   focusedTaskIndex?: number
   isFocusedColumn?: boolean
   showCreateInput?: boolean
@@ -59,6 +44,7 @@ export function KanbanColumn({
   selectedTaskId,
   multiSelectedIds,
   draggedTaskId,
+  dropIndicator,
   focusedTaskIndex = -1,
   isFocusedColumn = false,
   showCreateInput = false,
@@ -101,7 +87,6 @@ export function KanbanColumn({
       if (e.key === 'Enter' && newTaskTitle.trim()) {
         onCreateTask(newTaskTitle.trim())
         setNewTaskTitle('')
-        // Keep input open for rapid creation
       }
       if (e.key === 'Escape') {
         setNewTaskTitle('')
@@ -127,12 +112,63 @@ export function KanbanColumn({
     { label: '', onClick: () => {}, divider: true },
     {
       label: `Clear column (${tasks.length})`,
-      onClick: () => {
-        // This is a UI action - handled by parent
-      },
+      onClick: () => {},
       danger: tasks.length > 0
     }
   ]
+
+  // Build the task list with drop indicator inserted at the right position
+  const renderTasks = (): React.ReactNode => {
+    if (tasks.length === 0 && !isCreating && !dropIndicator) {
+      return (
+        <div className={styles.empty}>
+          <span style={{ opacity: 0.6 }}>No tasks</span>
+        </div>
+      )
+    }
+
+    const indicator = (
+      <div
+        key="drop-indicator"
+        className={styles.dropIndicator}
+      />
+    )
+
+    const elements: React.ReactNode[] = []
+
+    // If there are no tasks but we have a drop indicator, just show the indicator
+    if (tasks.length === 0 && dropIndicator) {
+      return indicator
+    }
+
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i]
+
+      // Insert drop indicator before this task if needed
+      if (dropIndicator && dropIndicator.index === i && task.id !== draggedTaskId) {
+        elements.push(indicator)
+      }
+
+      elements.push(
+        <TaskCard
+          key={task.id}
+          task={task}
+          onClick={() => onTaskClick(task.id)}
+          onMultiSelect={onMultiSelect}
+          isSelected={selectedTaskId === task.id}
+          isMultiSelected={multiSelectedIds?.has(task.id) ?? false}
+          isFocused={isFocusedColumn && focusedTaskIndex === i}
+        />
+      )
+    }
+
+    // Drop indicator at the end (after all cards)
+    if (dropIndicator && dropIndicator.index >= tasks.length) {
+      elements.push(indicator)
+    }
+
+    return elements
+  }
 
   return (
     <div
@@ -175,27 +211,7 @@ export function KanbanColumn({
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className={`${styles.taskList} ${isOver ? styles.dropTarget : ''}`}>
-          {tasks.length === 0 && !isCreating ? (
-            <div className={styles.empty}>
-              <span style={{ opacity: 0.6 }}>No tasks</span>
-            </div>
-          ) : (
-            tasks.map((task, index) =>
-              task.id === draggedTaskId ? (
-                <SortablePlaceholder key={task.id} id={task.id} />
-              ) : (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onClick={() => onTaskClick(task.id)}
-                  onMultiSelect={onMultiSelect}
-                  isSelected={selectedTaskId === task.id}
-                  isMultiSelected={multiSelectedIds?.has(task.id) ?? false}
-                  isFocused={isFocusedColumn && focusedTaskIndex === index}
-                />
-              )
-            )
-          )}
+          {renderTasks()}
         </div>
       </SortableContext>
 

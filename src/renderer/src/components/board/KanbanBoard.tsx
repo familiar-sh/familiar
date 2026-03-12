@@ -15,7 +15,7 @@ import type {
   DragOverEvent,
   CollisionDetection
 } from '@dnd-kit/core'
-import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { Task, TaskStatus } from '@shared/types'
 import { DEFAULT_COLUMNS } from '@shared/constants'
 import { filterTasks } from '@shared/utils/task-utils'
@@ -28,6 +28,11 @@ import { LoadingSpinner } from '@renderer/components/common'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
 import styles from './KanbanBoard.module.css'
+
+export interface DropIndicator {
+  column: TaskStatus
+  index: number
+}
 
 export function KanbanBoard(): React.JSX.Element {
   const { projectState, isLoading, addTask, moveTask, reorderTask, moveTasks, archiveAllDone } =
@@ -46,10 +51,13 @@ export function KanbanBoard(): React.JSX.Element {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [createColumnIndex, setCreateColumnIndex] = useState<number | null>(null)
 
-  // Virtual arrangement of task IDs per column during drag.
-  // This allows cross-column drag to show a gap in the target column.
-  const [dragArrangement, setDragArrangement] = useState<Record<string, string[]> | null>(null)
-  const dragActiveIdRef = useRef<string | null>(null)
+  // Drop indicator: tracks where the card would land.
+  // Uses state for rendering but avoids DOM-changing updates that cause
+  // dnd-kit measurement cascades (SortableContext items never change).
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null)
+
+  // Ref mirror of dropIndicator for use in handleDragEnd (avoids stale closure)
+  const dropIndicatorRef = useRef<DropIndicator | null>(null)
 
   const columnOrder = projectState?.columnOrder ?? DEFAULT_COLUMNS
 
@@ -69,25 +77,18 @@ export function KanbanBoard(): React.JSX.Element {
     const activeId = args.active.id
     const pointerCollisions = pointerWithin(args)
     if (pointerCollisions.length > 0) {
-      // Filter out the active (dragged) item — its droppable stays registered
-      // at the original DOM position and can cause false self-collisions.
       const filtered = pointerCollisions.filter((c) => c.id !== activeId)
       if (filtered.length > 0) {
-        // Prefer sortable task items over column droppables so that
-        // drop-between-cards positioning works correctly.
         const taskCollision = filtered.find(
           (c) => !(c.id as string).startsWith('column-')
         )
         return [taskCollision ?? filtered[0]]
       }
-      // Only self-collision detected — fall back to column collision
       const columnCollision = pointerCollisions.find(
         (c) => (c.id as string).startsWith('column-')
       )
       if (columnCollision) return [columnCollision]
     }
-
-    // Fallback to rect intersection for fast drags (also excluding active item)
     const rectCollisions = rectIntersection(args)
     return rectCollisions.filter((c) => c.id !== activeId)
   }, [])
@@ -114,22 +115,6 @@ export function KanbanBoard(): React.JSX.Element {
     return map
   }, [filteredTasks, columnOrder])
 
-  // During drag, compute task lists from the virtual arrangement so that
-  // the SortableContext in each column has the dragged item at the right spot.
-  const arrangedTasksByStatus = useMemo(() => {
-    if (!dragArrangement) return tasksByStatus
-    const taskMap = new Map<string, Task>()
-    for (const tasks of Object.values(tasksByStatus)) {
-      for (const t of tasks) taskMap.set(t.id, t)
-    }
-    const result: Record<string, Task[]> = {}
-    for (const status of columnOrder) {
-      const ids = dragArrangement[status] ?? []
-      result[status] = ids.map((id) => taskMap.get(id)).filter((t): t is Task => t !== undefined)
-    }
-    return result
-  }, [dragArrangement, tasksByStatus, columnOrder])
-
   // Keyboard navigation
   const handleKeyboardCreate = useCallback((colIndex: number) => {
     setCreateColumnIndex(colIndex)
@@ -154,7 +139,6 @@ export function KanbanBoard(): React.JSX.Element {
     onSelect: handleMarqueeSelect
   })
 
-  // Sync containerRef with the board div
   const boardRef = useCallback(
     (node: HTMLDivElement | null) => {
       containerRef.current = node
@@ -184,7 +168,20 @@ export function KanbanBoard(): React.JSX.Element {
     [addTask]
   )
 
-  // Find a task by ID across all columns
+  // Find which column a task belongs to (always uses real data, not virtual)
+  const findTaskColumn = useCallback(
+    (taskId: string): TaskStatus | null => {
+      for (const status of columnOrder) {
+        const tasks = tasksByStatus[status] ?? []
+        if (tasks.some((t) => t.id === taskId)) {
+          return status
+        }
+      }
+      return null
+    },
+    [columnOrder, tasksByStatus]
+  )
+
   const findTask = useCallback(
     (taskId: string): Task | undefined => {
       return filteredTasks.find((t) => t.id === taskId)
@@ -200,20 +197,12 @@ export function KanbanBoard(): React.JSX.Element {
       if (task) {
         setActiveTask(task)
         setDraggedTask(task.id)
-        dragActiveIdRef.current = task.id
-        // If dragging a task not in the selection, clear selection and select only this task
         if (!selectedTaskIds.has(task.id)) {
           clearSelection()
         }
-        // Initialize the virtual arrangement from current task order
-        const arrangement: Record<string, string[]> = {}
-        for (const status of columnOrder) {
-          arrangement[status] = (tasksByStatus[status] ?? []).map((t) => t.id)
-        }
-        setDragArrangement(arrangement)
       }
     },
-    [findTask, setDraggedTask, selectedTaskIds, clearSelection, columnOrder, tasksByStatus]
+    [findTask, setDraggedTask, selectedTaskIds, clearSelection]
   )
 
   const handleDragOver = useCallback(
@@ -221,119 +210,63 @@ export function KanbanBoard(): React.JSX.Element {
       const { active, over } = event
       if (!over) {
         setDragOverColumn(null)
+        setDropIndicator(null)
+        dropIndicatorRef.current = null
         return
       }
 
       const activeId = active.id as string
       const overId = over.id as string
 
-      // Determine target column from tasksByStatus (stable, not arrangement)
-      // Only the active item moves between columns in the arrangement;
-      // the over item is always a non-dragged task, so its real column is correct.
       let targetStatus: TaskStatus | null = null
+      let targetIndex: number
 
       if (overId.startsWith('column-')) {
         targetStatus = overId.replace('column-', '') as TaskStatus
+        // Dropping on empty column area → append to end
+        const colTasks = tasksByStatus[targetStatus] ?? []
+        targetIndex = colTasks.filter((t) => t.id !== activeId).length
       } else {
-        for (const status of columnOrder) {
-          if ((tasksByStatus[status] ?? []).some((t) => t.id === overId)) {
-            targetStatus = status as TaskStatus
-            break
-          }
-        }
+        // Over a task — find its column and index
+        targetStatus = findTaskColumn(overId)
+        if (!targetStatus) return
+        const colTasks = tasksByStatus[targetStatus] ?? []
+        const overIdx = colTasks.findIndex((t) => t.id === overId)
+        targetIndex = overIdx >= 0 ? overIdx : colTasks.length
       }
 
-      if (!targetStatus) return
       setDragOverColumn(targetStatus)
 
-      // Update the virtual arrangement to move the active item into the target column
-      setDragArrangement((prev) => {
-        if (!prev) return prev
-
-        // Find which column currently holds the active item in the arrangement
-        let sourceStatus: string | null = null
-        for (const status of columnOrder) {
-          if (prev[status]?.includes(activeId)) {
-            sourceStatus = status
-            break
-          }
+      const newIndicator: DropIndicator = { column: targetStatus, index: targetIndex }
+      // Only update state if the indicator actually changed (avoids unnecessary renders)
+      setDropIndicator((prev) => {
+        if (prev && prev.column === newIndicator.column && prev.index === newIndicator.index) {
+          return prev
         }
-        if (!sourceStatus) return prev
-
-        if (overId.startsWith('column-')) {
-          // Hovering on empty column area — place at end
-          if (sourceStatus === targetStatus) {
-            const ids = prev[sourceStatus].filter((id) => id !== activeId)
-            ids.push(activeId)
-            return { ...prev, [sourceStatus]: ids }
-          }
-          // Cross-column: remove from source, append to target
-          const sourceIds = prev[sourceStatus].filter((id) => id !== activeId)
-          const targetIds = [...prev[targetStatus].filter((id) => id !== activeId), activeId]
-          return { ...prev, [sourceStatus]: sourceIds, [targetStatus]: targetIds }
-        }
-
-        // Hovering over a specific task — find its index in the arrangement
-        const targetIds = prev[targetStatus] ?? []
-        const overIdx = targetIds.indexOf(overId)
-        if (overIdx === -1) return prev
-
-        if (sourceStatus === targetStatus) {
-          // Same column reorder
-          const activeIdx = targetIds.indexOf(activeId)
-          if (activeIdx === -1 || activeIdx === overIdx) return prev
-          return { ...prev, [targetStatus]: arrayMove(targetIds, activeIdx, overIdx) }
-        }
-
-        // Cross-column: remove from source, insert at target position
-        const sourceIds = prev[sourceStatus].filter((id) => id !== activeId)
-        const newTargetIds = targetIds.filter((id) => id !== activeId)
-        newTargetIds.splice(overIdx, 0, activeId)
-        return { ...prev, [sourceStatus]: sourceIds, [targetStatus]: newTargetIds }
+        return newIndicator
       })
+      dropIndicatorRef.current = newIndicator
     },
-    [setDragOverColumn, columnOrder, tasksByStatus]
+    [findTaskColumn, setDragOverColumn, tasksByStatus]
   )
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
-      const arrangement = dragArrangement
+      const indicator = dropIndicatorRef.current
       setActiveTask(null)
       setDraggedTask(null)
       setDragOverColumn(null)
-      setDragArrangement(null)
-      dragActiveIdRef.current = null
+      setDropIndicator(null)
+      dropIndicatorRef.current = null
 
-      if (!over || !arrangement) return
+      if (!over || !indicator) return
 
       const activeId = active.id as string
+      const sourceColumn = findTaskColumn(activeId)
+      if (!sourceColumn) return
 
-      // Find original source column from tasksByStatus (not arrangement)
-      let originalSourceColumn: TaskStatus | null = null
-      for (const status of columnOrder) {
-        if ((tasksByStatus[status] ?? []).some((t) => t.id === activeId)) {
-          originalSourceColumn = status as TaskStatus
-          break
-        }
-      }
-      if (!originalSourceColumn) return
-
-      // Find where the active item ended up in the arrangement
-      let targetStatus: TaskStatus | null = null
-      let targetIndex = 0
-      for (const status of columnOrder) {
-        const ids = arrangement[status] ?? []
-        const idx = ids.indexOf(activeId)
-        if (idx !== -1) {
-          targetStatus = status as TaskStatus
-          // The index should exclude the active item itself for the store API
-          targetIndex = ids.slice(0, idx).filter((id) => id !== activeId).length
-          break
-        }
-      }
-
-      if (!targetStatus) return
+      const { column: targetStatus, index: targetIndex } = indicator
 
       // Multi-select: move all selected tasks together
       const draggedIds =
@@ -342,22 +275,13 @@ export function KanbanBoard(): React.JSX.Element {
           : [activeId]
 
       if (draggedIds.length > 1) {
-        // For multi-select, find original columns from tasksByStatus
-        const idsToMove = draggedIds.filter((id) => {
-          for (const status of columnOrder) {
-            if ((tasksByStatus[status] ?? []).some((t) => t.id === id)) {
-              return status !== targetStatus
-            }
-          }
-          return false
-        })
+        const idsToMove = draggedIds.filter((id) => findTaskColumn(id) !== targetStatus)
         if (idsToMove.length > 0) {
           await moveTasks(idsToMove, targetStatus, targetIndex)
         }
         clearSelection()
       } else {
-        if (originalSourceColumn === targetStatus) {
-          // Same column reorder
+        if (sourceColumn === targetStatus) {
           await reorderTask(activeId, targetIndex)
         } else {
           await moveTask(activeId, targetStatus, targetIndex)
@@ -365,9 +289,7 @@ export function KanbanBoard(): React.JSX.Element {
       }
     },
     [
-      dragArrangement,
-      columnOrder,
-      tasksByStatus,
+      findTaskColumn,
       moveTask,
       reorderTask,
       moveTasks,
@@ -382,8 +304,8 @@ export function KanbanBoard(): React.JSX.Element {
     setActiveTask(null)
     setDraggedTask(null)
     setDragOverColumn(null)
-    setDragArrangement(null)
-    dragActiveIdRef.current = null
+    setDropIndicator(null)
+    dropIndicatorRef.current = null
   }, [setDraggedTask, setDragOverColumn])
 
   const handleArchiveDone = useCallback(async () => {
@@ -446,13 +368,16 @@ export function KanbanBoard(): React.JSX.Element {
           <KanbanColumn
             key={status}
             status={status}
-            tasks={arrangedTasksByStatus[status] ?? []}
+            tasks={tasksByStatus[status] ?? []}
             onTaskClick={handleTaskClick}
             onMultiSelect={handleMultiSelect}
             onCreateTask={(title) => handleCreateTask(status, title)}
             selectedTaskId={activeTaskId}
             multiSelectedIds={selectedTaskIds}
             draggedTaskId={activeTask?.id ?? null}
+            dropIndicator={
+              dropIndicator && dropIndicator.column === status ? dropIndicator : null
+            }
             focusedTaskIndex={focusedTaskIndex}
             isFocusedColumn={focusedColumnIndex === colIndex}
             showCreateInput={createColumnIndex === colIndex}
