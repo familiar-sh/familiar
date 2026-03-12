@@ -120,14 +120,14 @@ export function TaskCard({
     navigator.clipboard.writeText(task.id)
   }, [task.id])
 
-  const handleMarkAsRead = useCallback(() => {
+  const handleMarkAsRead = useCallback(async () => {
     // If multiple cards are selected and this card is among them, mark all selected as read
     if (isMultiSelected && selectedTaskIds.size > 1) {
       for (const id of selectedTaskIds) {
-        markReadByTaskId(id)
+        await markReadByTaskId(id)
       }
     } else {
-      markReadByTaskId(task.id)
+      await markReadByTaskId(task.id)
     }
   }, [isMultiSelected, selectedTaskIds, markReadByTaskId, task.id])
 
