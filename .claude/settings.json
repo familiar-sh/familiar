@@ -1,11 +1,23 @@
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/on-prompt-submit.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "env > /tmp/familiar-hook-debug.txt 2>&1; if [ -n \"$FAMILIAR_TASK_ID\" ] && command -v familiar >/dev/null 2>&1; then familiar notify \"Claude Finished\" \"Task $FAMILIAR_TASK_ID — Claude has finished responding\" --task \"$FAMILIAR_TASK_ID\" >> /tmp/familiar-hook-debug.txt 2>&1; else echo 'SKIPPED: FAMILIAR_TASK_ID not set or familiar not found' >> /tmp/familiar-hook-debug.txt; fi"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/on-stop.sh",
+            "timeout": 5
           }
         ]
       }
