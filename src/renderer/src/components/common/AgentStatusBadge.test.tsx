@@ -36,9 +36,24 @@ describe('AgentStatusBadge', () => {
     expect(screen.getByText('Error')).toBeTruthy()
   })
 
-  it('has correct title attribute', () => {
+  it('has correct aria-label attribute', () => {
     render(<AgentStatusBadge status="running" />)
     const badge = screen.getByTestId('agent-status-running')
-    expect(badge.getAttribute('title')).toBe('Agent: Running')
+    expect(badge.getAttribute('aria-label')).toBe('Agent: Running')
+  })
+
+  it('shows running as idle when task is not in-progress', () => {
+    render(<AgentStatusBadge status="running" taskStatus="todo" showLabel />)
+    expect(screen.getByText('Idle')).toBeTruthy()
+  })
+
+  it('shows running when task is in-progress', () => {
+    render(<AgentStatusBadge status="running" taskStatus="in-progress" showLabel />)
+    expect(screen.getByText('Running')).toBeTruthy()
+  })
+
+  it('shows done as idle when task is not in done column', () => {
+    render(<AgentStatusBadge status="done" taskStatus="in-review" showLabel />)
+    expect(screen.getByText('Idle')).toBeTruthy()
   })
 })

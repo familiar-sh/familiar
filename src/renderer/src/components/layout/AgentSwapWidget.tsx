@@ -167,7 +167,7 @@ export function AgentSwapWidget(): React.JSX.Element | null {
             onClick={() => handleAgentClick(task.id)}
             onMouseEnter={() => handleDotEnter('agent', task.id)}
             onMouseLeave={handleDotLeave}
-            title={task.title}
+            aria-label={task.title}
           />
           {preview?.type === 'agent' && preview.id === task.id && previewedTask && (
             <div
@@ -209,7 +209,7 @@ export function AgentSwapWidget(): React.JSX.Element | null {
             onClick={() => handleNotificationClick(notification)}
             onMouseEnter={() => handleDotEnter('notification', notification.id)}
             onMouseLeave={handleDotLeave}
-            title={notification.title}
+            aria-label={notification.title}
           />
           {preview?.type === 'notification' &&
             preview.id === notification.id &&

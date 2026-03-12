@@ -21,15 +21,19 @@ export function AgentStatusBadge({
   taskStatus,
   showLabel = false
 }: AgentStatusBadgeProps): React.JSX.Element {
-  // Green "done" dot only shows when task is in the done column; otherwise gray
-  const effectiveStatus =
-    status === 'done' && taskStatus && taskStatus !== 'done' ? 'idle' : status
+  // Only show running/done colors when the task status matches; otherwise gray
+  let effectiveStatus = status
+  if (status === 'running' && taskStatus && taskStatus !== 'in-progress') {
+    effectiveStatus = 'idle'
+  } else if (status === 'done' && taskStatus && taskStatus !== 'done') {
+    effectiveStatus = 'idle'
+  }
   const config = STATUS_CONFIG[effectiveStatus]
 
   return (
     <span
       style={badgeStyles.container}
-      title={`Agent: ${config.label}`}
+      aria-label={`Agent: ${config.label}`}
       data-testid={`agent-status-${status}`}
     >
       <span
