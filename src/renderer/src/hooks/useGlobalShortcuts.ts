@@ -17,6 +17,9 @@ export function useGlobalShortcuts(): void {
   const closeSettings = useUIStore((s) => s.closeSettings)
   const settingsOpen = useUIStore((s) => s.settingsOpen)
   const openCreateTaskModal = useUIStore((s) => s.openCreateTaskModal)
+  const shortcutsModalOpen = useUIStore((s) => s.shortcutsModalOpen)
+  const openShortcutsModal = useUIStore((s) => s.openShortcutsModal)
+  const closeShortcutsModal = useUIStore((s) => s.closeShortcutsModal)
   const addTask = useTaskStore((s) => s.addTask)
   const projectState = useTaskStore((s) => s.projectState)
 
@@ -79,6 +82,17 @@ export function useGlobalShortcuts(): void {
         return
       }
 
+      // ? — toggle keyboard shortcuts modal (not in inputs)
+      if (e.key === '?' && !meta && !isInputFocused()) {
+        e.preventDefault()
+        if (shortcutsModalOpen) {
+          closeShortcutsModal()
+        } else {
+          openShortcutsModal()
+        }
+        return
+      }
+
       // Escape or Shift+Escape — close whatever's open (detail, palette, etc.)
       // Shift+Escape is needed because plain Escape is consumed by xterm/Claude Code
       if (e.key === 'Escape') {
@@ -86,6 +100,11 @@ export function useGlobalShortcuts(): void {
         // Exception: Shift+Escape always closes (it's the explicit "close task view" shortcut)
         if (!e.shiftKey && isInputFocused()) return
 
+        if (shortcutsModalOpen) {
+          e.preventDefault()
+          closeShortcutsModal()
+          return
+        }
         if (commandPaletteOpen) {
           e.preventDefault()
           toggleCommandPalette()
@@ -116,6 +135,9 @@ export function useGlobalShortcuts(): void {
     closeSettings,
     settingsOpen,
     openCreateTaskModal,
+    shortcutsModalOpen,
+    openShortcutsModal,
+    closeShortcutsModal,
     addTask,
     projectState,
     isInputFocused

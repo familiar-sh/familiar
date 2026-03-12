@@ -87,7 +87,7 @@ export function KeyboardShortcutsModal(): React.JSX.Element | null {
   if (!open) return null
 
   return (
-    <div style={modalStyles.overlay} onClick={handleOverlayClick}>
+    <div style={modalStyles.overlay} onClick={handleOverlayClick} data-testid="shortcuts-overlay">
       <div style={modalStyles.wrapper}>
         <div style={modalStyles.header}>
           <span style={modalStyles.headerTitle}>Keyboard Shortcuts</span>

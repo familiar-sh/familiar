@@ -30,6 +30,7 @@ export function Navbar(): React.JSX.Element {
   const settingsOpen = useUIStore((s) => s.settingsOpen)
   const openSettings = useUIStore((s) => s.openSettings)
   const closeSettings = useUIStore((s) => s.closeSettings)
+  const openShortcutsModal = useUIStore((s) => s.openShortcutsModal)
 
   const notifications = useNotificationStore((s) => s.notifications)
   const markRead = useNotificationStore((s) => s.markRead)
@@ -132,6 +133,18 @@ export function Navbar(): React.JSX.Element {
       </div>
 
       <div className={styles.navGroupRight}>
+        {/* Keyboard shortcuts cheatsheet */}
+        <button
+          className={styles.navButton}
+          onClick={openShortcutsModal}
+          title="Keyboard shortcuts (?)"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8" />
+          </svg>
+        </button>
+
         {/* Settings gear */}
         <button
           className={`${styles.navButton} ${settingsOpen ? styles.navButtonActive : ''}`}

@@ -27,6 +27,9 @@ interface UIState {
   // Create task modal (used when creating from task detail view)
   createTaskModalOpen: boolean
 
+  // Keyboard shortcuts modal
+  shortcutsModalOpen: boolean
+
   // Board filters
   filters: TaskFilters
 
@@ -48,6 +51,8 @@ interface UIState {
   closeSettings: () => void
   openCreateTaskModal: () => void
   closeCreateTaskModal: () => void
+  openShortcutsModal: () => void
+  closeShortcutsModal: () => void
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void
   clearFilters: () => void
   setFocusedColumn: (index: number) => void
@@ -87,6 +92,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Create task modal
   createTaskModalOpen: false,
+
+  // Keyboard shortcuts modal
+  shortcutsModalOpen: false,
 
   // Board filters
   filters: { ...defaultFilters },
@@ -135,6 +143,12 @@ export const useUIStore = create<UIState>((set) => ({
 
   closeCreateTaskModal: () =>
     set({ createTaskModalOpen: false }),
+
+  openShortcutsModal: () =>
+    set({ shortcutsModalOpen: true }),
+
+  closeShortcutsModal: () =>
+    set({ shortcutsModalOpen: false }),
 
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
