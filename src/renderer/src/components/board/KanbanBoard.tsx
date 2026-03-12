@@ -168,7 +168,9 @@ export function KanbanBoard(): React.JSX.Element {
 
   // Auto-focus the new task input when the board is the active view,
   // but only if no card is keyboard-focused (so returning from task detail
-  // preserves the focused card for immediate re-entry with Enter)
+  // preserves the focused card for immediate re-entry with Enter).
+  // When a card IS focused, blur the active element so the browser doesn't
+  // auto-shift DOM focus to the input (which would clear keyboard nav state).
   const boardIsActive = !taskDetailOpen && !settingsOpen && !isLoading
   useEffect(() => {
     if (boardIsActive && focusedColumnIndex < 0) {
@@ -177,6 +179,11 @@ export function KanbanBoard(): React.JSX.Element {
         window.dispatchEvent(new Event('focus-new-task-input'))
       }, 50)
       return () => clearTimeout(timer)
+    }
+    if (boardIsActive && focusedColumnIndex >= 0) {
+      // Remove DOM focus from any element (e.g. terminal inside task detail)
+      // so the browser doesn't auto-move it to the input when the overlay hides
+      ;(document.activeElement as HTMLElement)?.blur?.()
     }
   }, [boardIsActive, focusedColumnIndex])
 

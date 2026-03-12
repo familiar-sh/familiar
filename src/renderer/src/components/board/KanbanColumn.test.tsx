@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { KanbanColumn } from './KanbanColumn'
 import type { Snippet } from '@shared/types'
 
@@ -257,5 +258,36 @@ describe('KanbanColumn — image paste', () => {
       const removeBtn = screen.queryByLabelText('Remove image')
       expect(removeBtn).toBeInTheDocument()
     })
+  })
+})
+
+describe('KanbanColumn — input focus guard', () => {
+  beforeEach(() => {
+    useUIStore.setState({
+      focusedColumnIndex: -1,
+      focusedTaskIndex: -1
+    })
+  })
+
+  it('clears keyboard focus when input is focused and no card is focused', () => {
+    useUIStore.setState({ focusedColumnIndex: -1 })
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+    fireEvent.focus(textarea)
+
+    expect(useUIStore.getState().focusedColumnIndex).toBe(-1)
+  })
+
+  it('does not clear keyboard focus when input receives focus while a card is focused', () => {
+    useUIStore.setState({ focusedColumnIndex: 1, focusedTaskIndex: 2 })
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+    fireEvent.focus(textarea)
+
+    // Keyboard nav state should be preserved
+    expect(useUIStore.getState().focusedColumnIndex).toBe(1)
+    expect(useUIStore.getState().focusedTaskIndex).toBe(2)
   })
 })

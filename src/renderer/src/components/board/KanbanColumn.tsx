@@ -265,6 +265,14 @@ export function KanbanColumn({
   )
 
   const handleInputFocus = useCallback(() => {
+    // If a card is keyboard-focused (e.g. returning from task detail where the
+    // browser auto-shifts DOM focus to this input), don't clear keyboard nav —
+    // just move DOM focus away so the card stays selected.
+    const { focusedColumnIndex } = useUIStore.getState()
+    if (focusedColumnIndex >= 0) {
+      inputRef.current?.blur()
+      return
+    }
     // Clear card keyboard focus so only the input shows as focused
     useUIStore.getState().setFocusedColumn(-1)
   }, [])
