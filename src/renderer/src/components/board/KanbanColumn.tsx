@@ -53,7 +53,7 @@ export function KanbanColumn({
 }: KanbanColumnProps): React.JSX.Element {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [isCreating, setIsCreating] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const contextMenu = useContextMenu()
 
   const { isOver, setNodeRef } = useDroppable({
@@ -82,16 +82,29 @@ export function KanbanColumn({
     setIsCreating(true)
   }, [])
 
+  const resizeCreateTextarea = useCallback(() => {
+    const el = inputRef.current
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight}px`
+    }
+  }, [])
+
+  useEffect(() => {
+    resizeCreateTextarea()
+  }, [newTaskTitle, resizeCreateTextarea])
+
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' && newTaskTitle.trim()) {
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey && newTaskTitle.trim()) {
+        e.preventDefault()
         onCreateTask(newTaskTitle.trim())
         setNewTaskTitle('')
       }
       if (e.key === 'Escape') {
         setNewTaskTitle('')
         setIsCreating(false)
-        ;(e.target as HTMLInputElement).blur()
+        ;(e.target as HTMLTextAreaElement).blur()
       }
     },
     [newTaskTitle, onCreateTask]
@@ -196,15 +209,15 @@ export function KanbanColumn({
 
       {isCreating && (
         <div className={styles.createArea}>
-          <input
+          <textarea
             ref={inputRef}
             className={styles.createInput}
-            type="text"
             placeholder="Task title... (Enter to create, Esc to cancel)"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
+            rows={1}
           />
         </div>
       )}

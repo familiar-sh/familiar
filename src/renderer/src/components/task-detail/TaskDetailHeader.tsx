@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Task, TaskStatus, Priority } from '@shared/types'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { StatusSelect } from './StatusSelect'
@@ -16,7 +16,20 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
   const [titleValue, setTitleValue] = useState(task.title)
   const [addingLabel, setAddingLabel] = useState(false)
   const [newLabel, setNewLabel] = useState('')
+  const titleRef = useRef<HTMLTextAreaElement>(null)
   const labelInputRef = useRef<HTMLInputElement>(null)
+
+  const resizeTitleTextarea = useCallback(() => {
+    const el = titleRef.current
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight}px`
+    }
+  }, [])
+
+  useEffect(() => {
+    resizeTitleTextarea()
+  }, [titleValue, resizeTitleTextarea])
 
   const handleTitleSubmit = useCallback(() => {
     const trimmed = titleValue.trim()
@@ -97,7 +110,8 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
       </div>
 
       <div className={styles.titleRow}>
-        <input
+        <textarea
+          ref={titleRef}
           className={styles.titleInput}
           value={titleValue}
           onChange={(e) => setTitleValue(e.target.value)}
@@ -105,6 +119,7 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
           onBlur={handleTitleSubmit}
           onKeyDown={handleTitleKeyDown}
           spellCheck={false}
+          rows={1}
         />
       </div>
 
