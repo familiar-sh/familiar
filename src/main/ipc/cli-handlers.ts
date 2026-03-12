@@ -31,10 +31,9 @@ export function registerCliHandlers(): void {
     async (): Promise<{ success: boolean; shell: string; error?: string }> => {
       try {
         // 1. Find the CLI binary
-        const appPath = app.isPackaged
-          ? join(process.resourcesPath, 'app.asar.unpacked')
-          : resolve(app.getAppPath())
-        const cliBin = join(appPath, 'dist', 'cli', 'index.mjs')
+        const cliBin = app.isPackaged
+          ? join(process.resourcesPath, 'bin', 'index.mjs')
+          : join(resolve(app.getAppPath()), 'dist', 'cli', 'index.mjs')
 
         if (!existsSync(cliBin)) {
           return {
