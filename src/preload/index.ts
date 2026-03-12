@@ -113,7 +113,7 @@ const api = {
     ipcRenderer.invoke('cli:install-to-path'),
 
   // Shell
-  openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:open-path', path),
+  showInFolder: (path: string): Promise<void> => ipcRenderer.invoke('shell:show-in-folder', path),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version')
