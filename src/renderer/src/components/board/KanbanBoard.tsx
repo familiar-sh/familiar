@@ -193,8 +193,11 @@ export function KanbanBoard(): React.JSX.Element {
   )
 
   const handleCreateTask = useCallback(
-    async (status: TaskStatus, title: string) => {
-      await addTask(title, { status })
+    async (status: TaskStatus, title: string, document?: string) => {
+      const task = await addTask(title, { status })
+      if (document) {
+        await window.api.writeTaskDocument(task.id, document)
+      }
     },
     [addTask]
   )
@@ -416,7 +419,7 @@ export function KanbanBoard(): React.JSX.Element {
               dashboardSnippets={dashboardSnippets}
               onTaskClick={handleTaskClick}
               onMultiSelect={handleMultiSelect}
-              onCreateTask={(title) => handleCreateTask(status, title)}
+              onCreateTask={(title, document) => handleCreateTask(status, title, document)}
               selectedTaskId={activeTaskId}
               multiSelectedIds={selectedTaskIds}
               draggedTaskId={activeTask?.id ?? null}

@@ -23,8 +23,13 @@ export function addCommand(): Command {
     .option('-p, --priority <priority>', 'Priority (urgent, high, medium, low, none)', 'none')
     .option('-s, --status <status>', 'Initial status (todo, in-progress, in-review, done, archived)', 'todo')
     .option('-l, --labels <labels>', 'Comma-separated labels')
-    .action(async (title: string, opts: { priority: string; status: string; labels?: string }) => {
+    .action(async (rawTitle: string, opts: { priority: string; status: string; labels?: string }) => {
       const root = getProjectRoot()
+
+      // Support multi-line: first line is the title, rest goes into the document
+      const lines = rawTitle.split('\n')
+      const title = lines[0].trim()
+      const documentContent = lines.slice(1).join('\n').trim()
 
       // Validate priority
       if (!isValidPriority(opts.priority)) {
@@ -65,10 +70,10 @@ export function addCommand(): Command {
       await ensureTaskDir(root, task.id)
       await writeTask(root, task)
 
-      // Write empty document.md
+      // Write document.md (with notes content if multi-line input was provided)
       const { getDataPath } = await import('../lib/file-ops')
       const docPath = path.join(getDataPath(root), 'tasks', task.id, DOCUMENT_FILE)
-      await fs.writeFile(docPath, '', 'utf-8')
+      await fs.writeFile(docPath, documentContent, 'utf-8')
 
       // Write initial activity
       await appendActivity(root, task.id, {

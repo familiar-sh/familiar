@@ -15,7 +15,7 @@ interface KanbanColumnProps {
   tasks: Task[]
   onTaskClick: (taskId: string) => void
   onMultiSelect: (taskId: string, append: boolean) => void
-  onCreateTask: (title: string) => void
+  onCreateTask: (title: string, document?: string) => void
   selectedTaskId?: string | null
   multiSelectedIds?: Set<string>
   draggedTaskId?: string | null
@@ -100,8 +100,13 @@ export function KanbanColumn({
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey && newTaskTitle.trim()) {
         e.preventDefault()
-        onCreateTask(newTaskTitle.trim())
-        setNewTaskTitle('')
+        const lines = newTaskTitle.trim().split('\n')
+        const title = lines[0].trim()
+        const document = lines.slice(1).join('\n').trim() || undefined
+        if (title) {
+          onCreateTask(title, document)
+          setNewTaskTitle('')
+        }
       }
       if (e.key === 'Escape') {
         setNewTaskTitle('')
@@ -221,7 +226,7 @@ export function KanbanColumn({
           <textarea
             ref={inputRef}
             className={styles.createInput}
-            placeholder="Task title... (Enter to create, Esc to cancel)"
+            placeholder="Task title... (Shift+Enter for notes, Enter to create)"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             onKeyDown={handleKeyDown}
