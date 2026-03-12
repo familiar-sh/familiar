@@ -5,6 +5,14 @@ export interface Snippet {
   command: string
   /** Whether to press Enter after sending the command */
   pressEnter: boolean
+  /** Lucide icon name (e.g., "play", "rocket"). undefined = no icon */
+  icon?: string
+  /** Show this snippet as a button on TaskCards in the board. Default: false */
+  showInDashboard?: boolean
+  /** When shown in dashboard, display only the icon (no text label). Default: false */
+  showIconInDashboard?: boolean
+  /** When shown in terminal bar, display only the icon (no text label). Default: false */
+  showIconInTerminal?: boolean
 }
 
 export interface ProjectSettings {
