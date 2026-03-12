@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState, useRef, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Task, TaskStatus, Priority, AgentStatus, Snippet, LabelConfig } from '@shared/types'
@@ -68,10 +68,28 @@ export function TaskCard({
   const { updateTask, deleteTask } = useTaskStore()
   const projectLabels = useTaskStore((s) => s.projectState?.labels ?? [])
   const contextMenu = useContextMenu()
+  const [priorityOpen, setPriorityOpen] = useState(false)
+  const priorityRef = useRef<HTMLButtonElement>(null)
   const notifications = useNotificationStore((s) => s.notifications)
   const hasUnread = notifications.some((n) => !n.read && n.taskId === task.id)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
   const selectedTaskIds = useBoardStore((s) => s.selectedTaskIds)
+
+  useEffect(() => {
+    if (!priorityOpen) return
+    function handleClickOutside(e: MouseEvent): void {
+      if (priorityRef.current && !priorityRef.current.contains(e.target as Node)) {
+        setPriorityOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [priorityOpen])
+
+  const handlePriorityIconClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setPriorityOpen((prev) => !prev)
+  }, [])
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -238,7 +256,32 @@ export function TaskCard({
         tabIndex={0}
       >
         <div className={styles.topRow}>
-          <PriorityIcon priority={task.priority} size={14} />
+          <button
+            ref={priorityRef}
+            className={styles.priorityBtn}
+            onClick={handlePriorityIconClick}
+            title={`Priority: ${task.priority}`}
+          >
+            <PriorityIcon priority={task.priority} size={14} />
+            {priorityOpen && (
+              <div className={styles.priorityDropdown}>
+                {(['urgent', 'high', 'medium', 'low', 'none'] as Priority[]).map((p) => (
+                  <button
+                    key={p}
+                    className={`${styles.priorityOption} ${p === task.priority ? styles.priorityOptionActive : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handlePriorityChange(p)
+                      setPriorityOpen(false)
+                    }}
+                  >
+                    <PriorityIcon priority={p} size={14} />
+                    <span>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </button>
           <span className={styles.title}>{task.title}</span>
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
