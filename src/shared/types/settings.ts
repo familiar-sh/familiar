@@ -22,6 +22,8 @@ export interface ProjectSettings {
   snippets?: Snippet[]
   /** When true, agents should simplify verbose task titles to a few words and move the original prompt to the task document */
   simplifyTaskTitles?: boolean
+  /** Project label definitions (name, color, description) */
+  labels?: import('./board').LabelConfig[]
 }
 
 export const DEFAULT_SNIPPETS: Snippet[] = [
@@ -31,5 +33,6 @@ export const DEFAULT_SNIPPETS: Snippet[] = [
 export const DEFAULT_SETTINGS: ProjectSettings = {
   defaultCommand:
     'claude --dangerously-skip-permissions --resume $FAMILIAR_TASK_ID',
-  snippets: DEFAULT_SNIPPETS
+  snippets: DEFAULT_SNIPPETS,
+  labels: undefined // Populated from DEFAULT_LABELS on first load
 }

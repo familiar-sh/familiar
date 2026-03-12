@@ -51,6 +51,11 @@ export async function readSettings(root: string): Promise<ProjectSettings> {
   }
 }
 
+export async function writeSettings(root: string, settings: ProjectSettings): Promise<void> {
+  const filePath = path.join(getDataPath(root), SETTINGS_FILE)
+  await atomicWriteJson(filePath, settings)
+}
+
 function getStatePath(root: string): string {
   return path.join(getDataPath(root), STATE_FILE)
 }

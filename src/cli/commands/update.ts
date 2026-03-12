@@ -10,7 +10,9 @@ import {
   writeProjectState,
   readTask,
   writeTask,
-  appendActivity
+  appendActivity,
+  readSettings,
+  writeSettings
 } from '../lib/file-ops'
 
 const VALID_AGENT_STATUSES: AgentStatus[] = ['idle', 'running', 'done', 'error']
@@ -75,7 +77,22 @@ export function updateCommand(): Command {
         state.tasks[taskIndex].labels = labels
         changes.push(`labels -> [${labels.join(', ')}]`)
 
-        // Add new labels to project label configs
+        // Add new labels to settings
+        const settings = await readSettings(root)
+        const settingsLabels = settings.labels ?? []
+        let settingsChanged = false
+        for (const label of labels) {
+          if (!settingsLabels.some((l) => l.name === label)) {
+            settingsLabels.push({ name: label, color: DEFAULT_LABEL_COLOR })
+            settingsChanged = true
+          }
+        }
+        if (settingsChanged) {
+          settings.labels = settingsLabels
+          await writeSettings(root, settings)
+        }
+
+        // Keep project state labels in sync
         for (const label of labels) {
           if (!state.labels.some((l) => l.name === label)) {
             state.labels.push({ name: label, color: DEFAULT_LABEL_COLOR })

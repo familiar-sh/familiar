@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { DEFAULT_LABEL_COLOR } from '@shared/constants'
-import { useTaskStore } from '@renderer/stores/task-store'
+import { useProjectLabels } from '@renderer/hooks/useProjectLabels'
 import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
 import styles from './LabelSelect.module.css'
 
@@ -27,15 +27,12 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
   const [newLabelName, setNewLabelName] = useState('')
   const [editingColor, setEditingColor] = useState<string | null>(null)
   const [colorPickerPos, setColorPickerPos] = useState<{ top: number; left: number } | null>(null)
+  const projectLabels = useProjectLabels()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const colorPickerRef = useRef<HTMLDivElement>(null)
   useDropdownPosition(dropdownRef, open)
-
-  const projectState = useTaskStore((s) => s.projectState)
-  const updateProjectLabels = useTaskStore((s) => s.updateProjectLabels)
-  const projectLabels = projectState?.labels ?? []
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
@@ -58,13 +55,24 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
     }
   }, [open])
 
+  const saveLabelsToSettings = useCallback(async (labels: LabelConfig[]) => {
+    try {
+      const settings = await window.api.readSettings()
+      settings.labels = labels
+      await window.api.writeSettings(settings)
+      setProjectLabels(labels)
+    } catch {
+      // Silently fail
+    }
+  }, [])
+
   const handleAddLabel = useCallback(() => {
     const trimmed = newLabelName.trim().toLowerCase()
     if (!trimmed) return
 
     // Add to project labels if new
     if (!projectLabels.some((l) => l.name === trimmed)) {
-      updateProjectLabels([...projectLabels, { name: trimmed, color: DEFAULT_LABEL_COLOR }])
+      saveLabelsToSettings([...projectLabels, { name: trimmed, color: DEFAULT_LABEL_COLOR }])
     }
 
     // Toggle it on for the task
@@ -73,7 +81,7 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
     }
 
     setNewLabelName('')
-  }, [newLabelName, projectLabels, taskLabels, onToggle, updateProjectLabels])
+  }, [newLabelName, projectLabels, taskLabels, onToggle, saveLabelsToSettings])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -92,10 +100,10 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
       const updated = projectLabels.map((l) =>
         l.name === labelName ? { ...l, color } : l
       )
-      updateProjectLabels(updated)
+      saveLabelsToSettings(updated)
       setEditingColor(null)
     },
-    [projectLabels, updateProjectLabels]
+    [projectLabels, saveLabelsToSettings]
   )
 
   // Filter project labels based on input

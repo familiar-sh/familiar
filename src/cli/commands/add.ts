@@ -13,7 +13,9 @@ import {
   writeProjectState,
   writeTask,
   appendActivity,
-  ensureTaskDir
+  ensureTaskDir,
+  readSettings,
+  writeSettings
 } from '../lib/file-ops'
 
 export function addCommand(): Command {
@@ -89,7 +91,23 @@ export function addCommand(): Command {
 
       // Update state
       state.tasks.push(task)
-      // Add any new labels to project label configs
+      // Add new labels to settings
+      if (labels.length > 0) {
+        const settings = await readSettings(root)
+        const settingsLabels = settings.labels ?? []
+        let settingsChanged = false
+        for (const label of labels) {
+          if (!settingsLabels.some((l) => l.name === label)) {
+            settingsLabels.push({ name: label, color: DEFAULT_LABEL_COLOR })
+            settingsChanged = true
+          }
+        }
+        if (settingsChanged) {
+          settings.labels = settingsLabels
+          await writeSettings(root, settings)
+        }
+      }
+      // Keep project state labels in sync
       for (const label of labels) {
         if (!state.labels.some((l) => l.name === label)) {
           state.labels.push({ name: label, color: DEFAULT_LABEL_COLOR })

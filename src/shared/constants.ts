@@ -42,11 +42,11 @@ export const AGENT_STATUS_LABELS: Record<AgentStatus, string> = {
 // Default label color for labels without a configured color
 export const DEFAULT_LABEL_COLOR = '#6b7280'
 
-// Default labels seeded on project init
+// Default labels seeded on project init and in settings
 export const DEFAULT_LABELS: LabelConfig[] = [
-  { name: 'bug', color: '#ef4444' },
-  { name: 'feature', color: '#3b82f6' },
-  { name: 'chore', color: '#6b7280' }
+  { name: 'bug', color: '#ef4444', description: 'Something is broken' },
+  { name: 'feature', color: '#3b82f6', description: 'New functionality' },
+  { name: 'chore', color: '#6b7280', description: 'Maintenance and housekeeping' }
 ]
 
 // File system paths

@@ -3,7 +3,7 @@ import type { Task, TaskStatus, Priority, AgentStatus } from '@shared/types'
 import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { Tooltip } from '@renderer/components/common'
-import { useTaskStore } from '@renderer/stores/task-store'
+import { useProjectLabels } from '@renderer/hooks/useProjectLabels'
 import { StatusSelect } from './StatusSelect'
 import { AgentStatusSelect } from './AgentStatusSelect'
 import { PrioritySelect } from './PrioritySelect'
@@ -75,7 +75,7 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
   const [titleValue, setTitleValue] = useState(task.title)
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
-  const projectLabels = useTaskStore((s) => s.projectState?.labels ?? [])
+  const projectLabels = useProjectLabels()
 
   const resizeTitleTextarea = useCallback(() => {
     const el = titleRef.current

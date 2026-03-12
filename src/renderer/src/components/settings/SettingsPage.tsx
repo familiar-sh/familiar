@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import type { ProjectSettings } from '@shared/types'
 import { DEFAULT_SETTINGS, DEFAULT_SNIPPETS } from '@shared/types/settings'
+import { DEFAULT_LABELS } from '@shared/constants'
 import { SnippetSettings } from './SnippetSettings'
+import { LabelSettings } from './LabelSettings'
 
 export function SettingsPage(): React.JSX.Element {
   const closeSettings = useUIStore((s) => s.closeSettings)
@@ -32,16 +34,24 @@ export function SettingsPage(): React.JSX.Element {
 
   const handleSave = useCallback(async () => {
     try {
-      // Filter out empty snippets before saving
+      // Filter out empty entries before saving
       const toSave = { ...settings }
       if (toSave.snippets) {
         toSave.snippets = toSave.snippets.filter((s) => s.title.trim() && s.command.trim())
       }
+      if (toSave.labels) {
+        toSave.labels = toSave.labels.filter((l) => l.name.trim())
+      }
       await window.api.writeSettings(toSave)
-      // Notify snippet consumers
+      // Notify consumers
       window.dispatchEvent(
         new CustomEvent('snippets-updated', {
           detail: toSave.snippets ?? DEFAULT_SNIPPETS
+        })
+      )
+      window.dispatchEvent(
+        new CustomEvent('labels-updated', {
+          detail: toSave.labels ?? DEFAULT_LABELS
         })
       )
       setSettings(toSave)
@@ -124,6 +134,18 @@ export function SettingsPage(): React.JSX.Element {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Labels section */}
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Labels</h2>
+            <p style={styles.settingDescription}>
+              Labels available for categorizing tasks across the project
+            </p>
+            <LabelSettings
+              labels={settings.labels ?? DEFAULT_LABELS}
+              onChange={(labels) => handleChange('labels', labels)}
+            />
           </div>
 
           {/* Snippets section */}

@@ -1,28 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { useTaskStore } from '@renderer/stores/task-store'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { LabelSelect } from './LabelSelect'
+
+const mockApi = {
+  readSettings: vi.fn(),
+  writeSettings: vi.fn().mockResolvedValue(undefined)
+}
+
+;(window as any).api = mockApi
 
 describe('LabelSelect', () => {
   const onToggle = vi.fn()
-  const mockUpdateProjectLabels = vi.fn()
+
+  const defaultLabels = [
+    { name: 'bug', color: '#ef4444' },
+    { name: 'feature', color: '#3b82f6' },
+    { name: 'chore', color: '#6b7280' }
+  ]
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useTaskStore.setState({
-      projectState: {
-        version: 1,
-        projectName: 'test',
-        tasks: [],
-        columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
-        labels: [
-          { name: 'bug', color: '#ef4444' },
-          { name: 'feature', color: '#3b82f6' },
-          { name: 'chore', color: '#6b7280' }
-        ]
-      },
-      updateProjectLabels: mockUpdateProjectLabels
-    })
+    mockApi.readSettings.mockResolvedValue({ labels: defaultLabels })
   })
 
   it('renders trigger button with + text', () => {
@@ -36,40 +34,45 @@ describe('LabelSelect', () => {
     expect(screen.queryByPlaceholderText('Search or create label...')).not.toBeInTheDocument()
   })
 
-  it('opens dropdown on click', () => {
+  it('opens dropdown and shows project labels', async () => {
     render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
 
-    expect(screen.getByPlaceholderText('Search or create label...')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('bug')).toBeInTheDocument()
+      expect(screen.getByText('feature')).toBeInTheDocument()
+      expect(screen.getByText('chore')).toBeInTheDocument()
+    })
   })
 
-  it('shows all project labels in dropdown', () => {
-    render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
-    fireEvent.click(screen.getByTitle('Add label'))
-
-    expect(screen.getByText('bug')).toBeInTheDocument()
-    expect(screen.getByText('feature')).toBeInTheDocument()
-    expect(screen.getByText('chore')).toBeInTheDocument()
-  })
-
-  it('shows checkmark for active labels', () => {
+  it('shows checkmark for active labels', async () => {
     render(<LabelSelect taskLabels={['bug']} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
 
-    expect(screen.getByText('\u2713')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('\u2713')).toBeInTheDocument()
+    })
   })
 
-  it('calls onToggle when clicking a label', () => {
+  it('calls onToggle when clicking a label', async () => {
     render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
+
+    await waitFor(() => {
+      expect(screen.getByText('bug')).toBeInTheDocument()
+    })
     fireEvent.click(screen.getByText('bug'))
 
     expect(onToggle).toHaveBeenCalledWith('bug')
   })
 
-  it('filters labels based on search input', () => {
+  it('filters labels based on search input', async () => {
     render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
+
+    await waitFor(() => {
+      expect(screen.getByText('feature')).toBeInTheDocument()
+    })
 
     const input = screen.getByPlaceholderText('Search or create label...')
     fireEvent.change(input, { target: { value: 'feat' } })
@@ -79,9 +82,13 @@ describe('LabelSelect', () => {
     expect(screen.queryByText('chore')).not.toBeInTheDocument()
   })
 
-  it('shows create option for new label', () => {
+  it('shows create option for new label', async () => {
     render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
+
+    await waitFor(() => {
+      expect(screen.getByText('bug')).toBeInTheDocument()
+    })
 
     const input = screen.getByPlaceholderText('Search or create label...')
     fireEvent.change(input, { target: { value: 'newlabel' } })
@@ -90,9 +97,13 @@ describe('LabelSelect', () => {
     expect(screen.getByText(/newlabel/)).toBeInTheDocument()
   })
 
-  it('does not show create option if label already exists', () => {
+  it('does not show create option if label already exists', async () => {
     render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
+
+    await waitFor(() => {
+      expect(screen.getByText('bug')).toBeInTheDocument()
+    })
 
     const input = screen.getByPlaceholderText('Search or create label...')
     fireEvent.change(input, { target: { value: 'bug' } })
@@ -100,17 +111,25 @@ describe('LabelSelect', () => {
     expect(screen.queryByText(/Create/)).not.toBeInTheDocument()
   })
 
-  it('creates and toggles new label on Enter', () => {
+  it('creates and toggles new label on Enter', async () => {
     render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
+
+    await waitFor(() => {
+      expect(screen.getByText('bug')).toBeInTheDocument()
+    })
 
     const input = screen.getByPlaceholderText('Search or create label...')
     fireEvent.change(input, { target: { value: 'newlabel' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 
-    expect(mockUpdateProjectLabels).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.objectContaining({ name: 'newlabel' })])
-    )
+    await waitFor(() => {
+      expect(mockApi.writeSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          labels: expect.arrayContaining([expect.objectContaining({ name: 'newlabel' })])
+        })
+      )
+    })
     expect(onToggle).toHaveBeenCalledWith('newlabel')
   })
 
@@ -137,44 +156,74 @@ describe('LabelSelect', () => {
     expect(screen.queryByPlaceholderText('Search or create label...')).not.toBeInTheDocument()
   })
 
-  it('shows "No labels" when no project labels exist and no search', () => {
-    useTaskStore.setState({
-      projectState: {
-        version: 1,
-        projectName: 'test',
-        tasks: [],
-        columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
-        labels: []
-      }
+  it('shows "No labels" when settings returns empty labels', async () => {
+    mockApi.readSettings.mockResolvedValue({ labels: [] })
+
+    render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
+
+    // Wait for the empty labels to load
+    await waitFor(() => {
+      expect(mockApi.readSettings).toHaveBeenCalled()
     })
 
-    render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
 
-    expect(screen.getByText('No labels')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('No labels')).toBeInTheDocument()
+    })
   })
 
-  it('does not add empty label name', () => {
+  it('does not add empty label name', async () => {
     render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
+
+    await waitFor(() => {
+      expect(screen.getByText('bug')).toBeInTheDocument()
+    })
 
     const input = screen.getByPlaceholderText('Search or create label...')
     fireEvent.change(input, { target: { value: '   ' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 
-    expect(mockUpdateProjectLabels).not.toHaveBeenCalled()
+    expect(mockApi.writeSettings).not.toHaveBeenCalled()
     expect(onToggle).not.toHaveBeenCalled()
   })
 
-  it('opens color picker when clicking color button', () => {
+  it('opens color picker when clicking color button', async () => {
     render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
     fireEvent.click(screen.getByTitle('Add label'))
+
+    await waitFor(() => {
+      expect(screen.getByText('bug')).toBeInTheDocument()
+    })
 
     const colorBtns = screen.getAllByTitle('Change color')
     fireEvent.click(colorBtns[0])
 
-    // 9 preset color swatches should appear
+    // 9 preset color swatches should appear in a portal
     const container = document.querySelector('[class*="colorPicker"]')
     expect(container).toBeTruthy()
+  })
+
+  it('updates labels when labels-updated event fires', async () => {
+    render(<LabelSelect taskLabels={[]} onToggle={onToggle} />)
+
+    // Wait for initial load
+    await waitFor(() => {
+      expect(mockApi.readSettings).toHaveBeenCalled()
+    })
+
+    // Dispatch update event with new labels
+    window.dispatchEvent(
+      new CustomEvent('labels-updated', {
+        detail: [{ name: 'custom', color: '#ff0000' }]
+      })
+    )
+
+    fireEvent.click(screen.getByTitle('Add label'))
+
+    await waitFor(() => {
+      expect(screen.getByText('custom')).toBeInTheDocument()
+    })
   })
 })

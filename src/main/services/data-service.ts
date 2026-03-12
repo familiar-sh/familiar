@@ -324,12 +324,30 @@ export class DataService {
 
   async readSettings(): Promise<ProjectSettings> {
     const filePath = this.getDataPath(SETTINGS_FILE)
+    let settings: ProjectSettings
     try {
       const raw = await this.fs.readFile(filePath)
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } as ProjectSettings
+      settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } as ProjectSettings
     } catch {
-      return { ...DEFAULT_SETTINGS }
+      settings = { ...DEFAULT_SETTINGS }
     }
+
+    // Migrate: if settings has no labels, pull from projectState (or use defaults)
+    if (!settings.labels) {
+      try {
+        const state = await this.readProjectState()
+        if (state.labels && state.labels.length > 0) {
+          settings.labels = state.labels
+        } else {
+          settings.labels = [...DEFAULT_LABELS]
+        }
+      } catch {
+        settings.labels = [...DEFAULT_LABELS]
+      }
+      await this.writeSettings(settings)
+    }
+
+    return settings
   }
 
   async writeSettings(settings: ProjectSettings): Promise<void> {
