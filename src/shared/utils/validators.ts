@@ -2,12 +2,11 @@ import type { Task, TaskStatus, Priority } from '../types'
 import type { ProjectState } from '../types'
 
 const VALID_STATUSES: TaskStatus[] = [
-  'backlog',
   'todo',
   'in-progress',
   'in-review',
   'done',
-  'cancelled'
+  'archived'
 ]
 
 const VALID_PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none']

@@ -29,4 +29,7 @@ export function registerFileHandlers(dataService: DataService): void {
     'task:save-attachment',
     async (_, taskId, fileName, data) => dataService.saveAttachment(taskId, fileName, data)
   )
+
+  ipcMain.handle('settings:read', async () => dataService.readSettings())
+  ipcMain.handle('settings:write', async (_, settings) => dataService.writeSettings(settings))
 }

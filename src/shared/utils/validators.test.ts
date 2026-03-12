@@ -8,7 +8,7 @@ import {
 
 describe('isValidTaskStatus', () => {
   it('returns true for valid statuses', () => {
-    const validStatuses = ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled']
+    const validStatuses = ['todo', 'in-progress', 'in-review', 'done', 'archived']
     for (const status of validStatuses) {
       expect(isValidTaskStatus(status)).toBe(true)
     }
@@ -89,7 +89,7 @@ describe('validateProjectState', () => {
     version: 1,
     projectName: 'Test project',
     tasks: [],
-    columnOrder: ['backlog', 'todo', 'done'],
+    columnOrder: ['todo', 'in-progress', 'done'],
     labels: ['bug', 'feature']
   }
 
@@ -114,7 +114,7 @@ describe('validateProjectState', () => {
   })
 
   it('returns false when columnOrder is not an array', () => {
-    expect(validateProjectState({ ...validState, columnOrder: 'backlog' })).toBe(false)
+    expect(validateProjectState({ ...validState, columnOrder: 'todo' })).toBe(false)
   })
 
   it('returns false when labels is not an array', () => {

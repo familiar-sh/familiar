@@ -72,3 +72,33 @@
 .openWorkspaceButton:active {
   background-color: var(--accent-active);
 }
+
+/* ---- Archive Done button ---- */
+
+.archiveDoneButton {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-2);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.archiveDoneButton:hover {
+  color: var(--text-secondary);
+  background-color: var(--bg-elevated);
+}
+
+/* ---- Marquee selection rectangle ---- */
+
+.marquee {
+  border: 1px solid var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 9999;
+}

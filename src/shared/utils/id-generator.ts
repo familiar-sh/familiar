@@ -8,6 +8,10 @@ export function generateActivityId(): string {
   return `act_${nanoid(8)}`
 }
 
+export function generateNotificationId(): string {
+  return `ntf_${nanoid(8)}`
+}
+
 export function generateId(): string {
   return nanoid(8)
 }

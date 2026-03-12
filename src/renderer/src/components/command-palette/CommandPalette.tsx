@@ -5,12 +5,11 @@ import { useTaskStore } from '../../stores/task-store'
 import type { TaskStatus } from '@shared/types'
 
 const COLUMN_LABELS: { status: TaskStatus; label: string }[] = [
-  { status: 'backlog', label: 'Backlog' },
   { status: 'todo', label: 'Todo' },
   { status: 'in-progress', label: 'In Progress' },
   { status: 'in-review', label: 'In Review' },
   { status: 'done', label: 'Done' },
-  { status: 'cancelled', label: 'Cancelled' }
+  { status: 'archived', label: 'Archive' }
 ]
 
 export function CommandPalette(): React.JSX.Element | null {
@@ -126,12 +125,11 @@ export function CommandPalette(): React.JSX.Element | null {
 
 function StatusDot({ status }: { status: TaskStatus }): React.JSX.Element {
   const colorMap: Record<TaskStatus, string> = {
-    backlog: '#5c5c6e',
     todo: '#f0f0f4',
     'in-progress': '#f2c94c',
     'in-review': '#5e6ad2',
     done: '#27ae60',
-    cancelled: '#e74c3c'
+    archived: '#6b7280'
   }
   return (
     <span

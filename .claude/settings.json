@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "env > /tmp/kanban-hook-debug.txt 2>&1; if [ -n \"$KANBAN_TASK_ID\" ] && command -v kanban-agent >/dev/null 2>&1; then kanban-agent notify \"Claude Finished\" \"Task $KANBAN_TASK_ID — Claude has finished responding\" --task \"$KANBAN_TASK_ID\" >> /tmp/kanban-hook-debug.txt 2>&1; else echo 'SKIPPED: KANBAN_TASK_ID not set or kanban-agent not found' >> /tmp/kanban-hook-debug.txt; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

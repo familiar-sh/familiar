@@ -13,7 +13,7 @@ export function createTask(title: string, options?: Partial<Task>): Task {
   return {
     id: generateTaskId(),
     title,
-    status: 'backlog' as TaskStatus,
+    status: 'todo' as TaskStatus,
     priority: 'none' as Priority,
     labels: [],
     agentStatus: 'idle' as AgentStatus,

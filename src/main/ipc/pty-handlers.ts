@@ -6,19 +6,40 @@ export function registerPtyHandlers(
   mainWindow: BrowserWindow
 ): void {
   ipcMain.handle('pty:create', async (_event, taskId: string, paneId: string, cwd: string) => {
-    return ptyManager.create(taskId, paneId, cwd)
+    try {
+      return await ptyManager.create(taskId, paneId, cwd)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('pty:create failed:', message)
+      throw new Error(`Failed to create terminal session: ${message}`)
+    }
   })
 
   ipcMain.handle('pty:write', async (_event, sessionId: string, data: string) => {
-    await ptyManager.write(sessionId, data)
+    try {
+      await ptyManager.write(sessionId, data)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`pty:write failed for ${sessionId}:`, message)
+    }
   })
 
   ipcMain.handle('pty:resize', async (_event, sessionId: string, cols: number, rows: number) => {
-    await ptyManager.resize(sessionId, cols, rows)
+    try {
+      await ptyManager.resize(sessionId, cols, rows)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`pty:resize failed for ${sessionId}:`, message)
+    }
   })
 
   ipcMain.handle('pty:destroy', async (_event, sessionId: string) => {
-    await ptyManager.destroy(sessionId)
+    try {
+      await ptyManager.destroy(sessionId)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`pty:destroy failed for ${sessionId}:`, message)
+    }
   })
 
   // Forward PTY data to the renderer process

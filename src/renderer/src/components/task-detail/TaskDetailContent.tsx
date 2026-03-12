@@ -10,12 +10,9 @@ interface TaskDetailContentProps {
   taskId: string
 }
 
-type RightTab = 'terminal' | 'activity'
-
 export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX.Element {
   const editorPanelWidth = useUIStore((s) => s.editorPanelWidth)
   const setEditorPanelWidth = useUIStore((s) => s.setEditorPanelWidth)
-  const [rightTab, setRightTab] = useState<RightTab>('terminal')
   const [documentContent, setDocumentContent] = useState<string | undefined>(undefined)
   const [documentLoaded, setDocumentLoaded] = useState(false)
 
@@ -51,42 +48,25 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX
     <div className={styles.container}>
       <SplitPanel
         left={
-          <div className={styles.editorPlaceholder}>
-            {documentLoaded ? (
-              <BlockEditor
-                key={taskId}
-                taskId={taskId}
-                initialContent={documentContent}
-              />
-            ) : (
-              <div className={styles.editorArea}>Loading...</div>
-            )}
+          <div className={styles.leftPanel}>
+            <div className={styles.editorSection}>
+              {documentLoaded ? (
+                <BlockEditor
+                  key={taskId}
+                  taskId={taskId}
+                  initialContent={documentContent}
+                />
+              ) : (
+                <div className={styles.editorArea}>Loading...</div>
+              )}
+            </div>
+            <div className={styles.activitySection}>
+              <ActivityTimeline taskId={taskId} />
+            </div>
           </div>
         }
         right={
-          <div className={styles.rightPanel}>
-            <div className={styles.tabBar}>
-              <button
-                className={`${styles.tab} ${rightTab === 'terminal' ? styles.tabActive : ''}`}
-                onClick={() => setRightTab('terminal')}
-              >
-                Terminal
-              </button>
-              <button
-                className={`${styles.tab} ${rightTab === 'activity' ? styles.tabActive : ''}`}
-                onClick={() => setRightTab('activity')}
-              >
-                Activity
-              </button>
-            </div>
-            <div className={styles.tabContent}>
-              {rightTab === 'terminal' ? (
-                <TerminalPanel taskId={taskId} />
-              ) : (
-                <ActivityTimeline taskId={taskId} />
-              )}
-            </div>
-          </div>
+          <TerminalPanel taskId={taskId} />
         }
         defaultLeftWidth={editorPanelWidth}
         minLeftWidth={20}

@@ -8,19 +8,19 @@ import {
 import type { TaskStatus, Priority } from '@shared/types'
 
 describe('DEFAULT_COLUMNS', () => {
-  it('has all 6 statuses', () => {
-    expect(DEFAULT_COLUMNS).toHaveLength(6)
+  it('has all 5 statuses', () => {
+    expect(DEFAULT_COLUMNS).toHaveLength(5)
   })
 
   it('contains all expected status values', () => {
-    const expected: TaskStatus[] = ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled']
+    const expected: TaskStatus[] = ['todo', 'in-progress', 'in-review', 'done', 'archived']
     expect(DEFAULT_COLUMNS).toEqual(expected)
   })
 })
 
 describe('COLUMN_LABELS', () => {
-  it('maps all 6 statuses to labels', () => {
-    const statuses: TaskStatus[] = ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled']
+  it('maps all 5 statuses to labels', () => {
+    const statuses: TaskStatus[] = ['todo', 'in-progress', 'in-review', 'done', 'archived']
     for (const status of statuses) {
       expect(COLUMN_LABELS[status]).toBeDefined()
       expect(typeof COLUMN_LABELS[status]).toBe('string')
@@ -29,12 +29,11 @@ describe('COLUMN_LABELS', () => {
   })
 
   it('has the expected label values', () => {
-    expect(COLUMN_LABELS['backlog']).toBe('Backlog')
     expect(COLUMN_LABELS['todo']).toBe('Todo')
     expect(COLUMN_LABELS['in-progress']).toBe('In Progress')
     expect(COLUMN_LABELS['in-review']).toBe('In Review')
     expect(COLUMN_LABELS['done']).toBe('Done')
-    expect(COLUMN_LABELS['cancelled']).toBe('Cancelled')
+    expect(COLUMN_LABELS['archived']).toBe('Archive')
   })
 })
 

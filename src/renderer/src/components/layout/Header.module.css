@@ -9,19 +9,9 @@
   background-color: var(--bg-deepest);
   border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
-  /* Leave space for macOS traffic lights */
-  padding-left: 80px;
   min-height: 48px;
   user-select: none;
   gap: var(--space-4);
-}
-
-.projectName {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .searchArea {

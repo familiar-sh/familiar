@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { ProjectState, Task, ActivityEntry } from '../shared/types'
+import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification } from '../shared/types'
 
 // Custom APIs for renderer
 const api = {
@@ -58,10 +58,24 @@ const api = {
   tmuxList: (): Promise<string[]> => ipcRenderer.invoke('tmux:list'),
   tmuxAttach: (name: string): Promise<void> => ipcRenderer.invoke('tmux:attach', name),
   tmuxDetach: (name: string): Promise<void> => ipcRenderer.invoke('tmux:detach', name),
+  tmuxKill: (name: string): Promise<void> => ipcRenderer.invoke('tmux:kill', name),
+  tmuxHas: (name: string): Promise<boolean> => ipcRenderer.invoke('tmux:has', name),
 
   // Notifications
   sendNotification: (title: string, body: string): Promise<void> =>
     ipcRenderer.invoke('notification:send', title, body),
+  listNotifications: (): Promise<AppNotification[]> =>
+    ipcRenderer.invoke('notification:list'),
+  markNotificationRead: (id: string): Promise<void> =>
+    ipcRenderer.invoke('notification:mark-read', id),
+  markNotificationsByTaskRead: (taskId: string): Promise<void> =>
+    ipcRenderer.invoke('notification:mark-read-by-task', taskId),
+  markAllNotificationsRead: (): Promise<void> =>
+    ipcRenderer.invoke('notification:mark-all-read'),
+  clearNotifications: (): Promise<void> =>
+    ipcRenderer.invoke('notification:clear'),
+  appendNotification: (notification: AppNotification): Promise<void> =>
+    ipcRenderer.invoke('notification:append', notification),
 
   // Window
   openDirectory: (): Promise<string | null> => ipcRenderer.invoke('window:open-directory'),
@@ -83,6 +97,11 @@ const api = {
   unwatchProjectDir: (): void => {
     ipcRenderer.send('project:unwatch')
   },
+
+  // Settings
+  readSettings: (): Promise<ProjectSettings> => ipcRenderer.invoke('settings:read'),
+  writeSettings: (settings: ProjectSettings): Promise<void> =>
+    ipcRenderer.invoke('settings:write', settings),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version')

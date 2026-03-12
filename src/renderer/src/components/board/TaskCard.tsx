@@ -1,27 +1,38 @@
 import { useCallback } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Task, TaskStatus, Priority } from '@shared/types'
-import { PRIORITY_COLORS } from '@shared/constants'
+import type { Task, TaskStatus, Priority, AgentStatus } from '@shared/types'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { useTaskStore } from '@renderer/stores/task-store'
-import { ContextMenu, AgentStatusBadge } from '@renderer/components/common'
+import { useNotificationStore } from '@renderer/stores/notification-store'
+import { ContextMenu } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import styles from './TaskCard.module.css'
+
+const AGENT_STATUS_COLORS: Record<AgentStatus, string> = {
+  idle: '#5c5c6e',
+  running: '#5e6ad2',
+  done: '#27ae60',
+  error: '#e74c3c'
+}
 
 interface TaskCardProps {
   task: Task
   onClick: () => void
+  onMultiSelect?: (taskId: string, append: boolean) => void
   isDragging?: boolean
   isSelected?: boolean
+  isMultiSelected?: boolean
   isFocused?: boolean
 }
 
 export function TaskCard({
   task,
   onClick,
+  onMultiSelect,
   isDragging = false,
   isSelected = false,
+  isMultiSelected = false,
   isFocused = false
 }: TaskCardProps): React.JSX.Element {
   const {
@@ -38,6 +49,10 @@ export function TaskCard({
 
   const { updateTask, deleteTask } = useTaskStore()
   const contextMenu = useContextMenu()
+  const hasUnread = useNotificationStore((s) =>
+    s.notifications.some((n) => !n.read && n.taskId === task.id)
+  )
+  const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -48,11 +63,28 @@ export function TaskCard({
   const cardClass = [
     styles.card,
     isSelected ? styles.cardSelected : '',
+    isMultiSelected ? styles.cardMultiSelected : '',
     isDragging || isSortableDragging ? styles.cardDragging : '',
-    isFocused ? styles.cardFocused : ''
+    isFocused ? styles.cardFocused : '',
+    hasUnread ? styles.cardNotified : ''
   ]
     .filter(Boolean)
     .join(' ')
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        e.stopPropagation()
+        onMultiSelect?.(task.id, true)
+      } else {
+        if (hasUnread) {
+          markReadByTaskId(task.id)
+        }
+        onClick()
+      }
+    },
+    [onClick, onMultiSelect, task.id, hasUnread, markReadByTaskId]
+  )
 
   const handleStatusChange = useCallback(
     (status: TaskStatus) => {
@@ -80,11 +112,6 @@ export function TaskCard({
   }, [task.id])
 
   const contextMenuItems: ContextMenuItem[] = [
-    {
-      label: 'Move to Backlog',
-      onClick: () => handleStatusChange('backlog'),
-      shortcut: ''
-    },
     {
       label: 'Move to Todo',
       onClick: () => handleStatusChange('todo'),
@@ -142,7 +169,7 @@ export function TaskCard({
         ref={setNodeRef}
         style={style}
         className={cardClass}
-        onClick={onClick}
+        onClick={handleClick}
         onContextMenu={contextMenu.open}
         data-task-id={task.id}
         {...attributes}
@@ -152,12 +179,12 @@ export function TaskCard({
       >
         <div className={styles.topRow}>
           <span
-            className={styles.priorityDot}
-            style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
-            title={`Priority: ${task.priority}`}
+            className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
+            style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
+            title={`Agent: ${task.agentStatus}`}
           />
           <span className={styles.title}>{task.title}</span>
-          <AgentStatusBadge status={task.agentStatus} />
+          {hasUnread && <span className={styles.notificationDot} title="Has notifications" />}
         </div>
 
         <div className={styles.bottomRow}>
@@ -182,25 +209,36 @@ export function TaskCard({
 
 /** Plain TaskCard without dnd-kit for use in DragOverlay */
 export function TaskCardOverlay({
-  task
+  task,
+  count = 1
 }: {
   task: Task
+  count?: number
 }): React.JSX.Element {
   return (
-    <div className={`${styles.card} ${styles.cardDragging}`}>
-      <div className={styles.topRow}>
-        <span
-          className={styles.priorityDot}
-          style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
-        />
-        <span className={styles.title}>{task.title}</span>
-      </div>
-      <div className={styles.bottomRow}>
-        {task.labels.map((label) => (
-          <span key={label} className={styles.label}>
-            {label}
-          </span>
-        ))}
+    <div className={styles.overlayWrapper}>
+      {count > 1 && (
+        <>
+          {count > 2 && <div className={styles.stackedCard} style={{ height: '100%' }} />}
+          <div className={styles.stackedCard} style={{ height: '100%' }} />
+          <span className={styles.selectionBadge}>{count}</span>
+        </>
+      )}
+      <div className={`${styles.card} ${styles.cardDragging}`} style={{ position: 'relative' }}>
+        <div className={styles.topRow}>
+          <span
+            className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
+            style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
+          />
+          <span className={styles.title}>{task.title}</span>
+        </div>
+        <div className={styles.bottomRow}>
+          {task.labels.map((label) => (
+            <span key={label} className={styles.label}>
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   )

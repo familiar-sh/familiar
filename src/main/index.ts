@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, protocol, net } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { ElectronTmuxManager } from './platform/electron-tmux'
@@ -15,8 +15,23 @@ const tmuxManager = new ElectronTmuxManager()
 const ptyManager = new ElectronPtyManager(tmuxManager)
 let fileWatcher: FileWatcher | null = null
 
+// Register custom protocol scheme for serving attachment files
+// Must be called before app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'kanban-attachment',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      bypassCSP: true
+    }
+  }
+])
+
 // Default project root to the current working directory
 const dataService = new DataService(process.cwd())
+ptyManager.setDataService(dataService)
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -58,7 +73,7 @@ function createWindow(): void {
   registerPtyHandlers(ptyManager, mainWindow)
   registerTmuxHandlers(tmuxManager)
   registerFileHandlers(dataService)
-  registerNotificationHandlers()
+  registerNotificationHandlers(dataService)
   registerWindowHandlers(
     mainWindow,
     dataService,
@@ -75,6 +90,14 @@ app.whenReady().then(() => {
   // and ignore CommandOrControl + R in production.
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
+  })
+
+  // Handle kanban-attachment:// protocol requests by serving local files
+  protocol.handle('kanban-attachment', (request) => {
+    // URL format: kanban-attachment://file/<absolute-path>
+    const url = new URL(request.url)
+    const filePath = decodeURIComponent(url.pathname)
+    return net.fetch(`file://${filePath}`)
   })
 
   createWindow()

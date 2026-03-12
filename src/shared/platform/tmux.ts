@@ -4,7 +4,7 @@
  */
 export interface ITmuxManager {
   listSessions(): Promise<string[]>
-  createSession(sessionName: string, cwd: string): Promise<void>
+  createSession(sessionName: string, cwd: string, env?: Record<string, string>): Promise<void>
   attachSession(sessionName: string): Promise<void>
   detachSession(sessionName: string): Promise<void>
   killSession(sessionName: string): Promise<void>

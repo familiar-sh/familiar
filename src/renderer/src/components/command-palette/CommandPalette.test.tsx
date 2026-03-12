@@ -63,7 +63,7 @@ function resetStores(): void {
         sortOrder: 0
       }
     ],
-    columnOrder: ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled'],
+    columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
     labels: ['bug', 'testing']
   }
 
@@ -107,7 +107,6 @@ describe('CommandPalette', () => {
   it('shows navigation items for all columns', () => {
     useUIStore.setState({ commandPaletteOpen: true })
     render(<CommandPalette />)
-    expect(screen.getByText('Go to Backlog')).toBeInTheDocument()
     expect(screen.getByText('Go to Todo')).toBeInTheDocument()
     expect(screen.getByText('Go to In Progress')).toBeInTheDocument()
     expect(screen.getByText('Go to Done')).toBeInTheDocument()

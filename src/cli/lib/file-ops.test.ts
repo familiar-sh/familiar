@@ -36,7 +36,7 @@ describe('CLI file-ops', () => {
       version: 1,
       projectName: 'test-project',
       tasks: [],
-      columnOrder: ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled'],
+      columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
       labels: []
     }
     await fs.writeFile(
@@ -51,7 +51,7 @@ describe('CLI file-ops', () => {
     return {
       id: 'tsk_fops01',
       title: 'File ops task',
-      status: 'backlog',
+      status: 'todo',
       priority: 'none',
       labels: [],
       agentStatus: 'idle',
@@ -97,7 +97,7 @@ describe('CLI file-ops', () => {
       const readBack = await readTask(tmpDir, task.id)
       expect(readBack.title).toBe('Round trip me')
       expect(readBack.id).toBe(task.id)
-      expect(readBack.status).toBe('backlog')
+      expect(readBack.status).toBe('todo')
     })
   })
 

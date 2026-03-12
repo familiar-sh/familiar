@@ -40,7 +40,7 @@ describe('CLI workflow integration test', () => {
       version: 1,
       projectName: 'workflow-test',
       tasks: [],
-      columnOrder: ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled'],
+      columnOrder: ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'archived'],
       labels: []
     }
 

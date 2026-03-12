@@ -13,33 +13,38 @@ interface KanbanColumnProps {
   status: TaskStatus
   tasks: Task[]
   onTaskClick: (taskId: string) => void
+  onMultiSelect: (taskId: string, append: boolean) => void
   onCreateTask: (title: string) => void
   selectedTaskId?: string | null
+  multiSelectedIds?: Set<string>
   focusedTaskIndex?: number
   isFocusedColumn?: boolean
   showCreateInput?: boolean
   onCreateInputShown?: () => void
+  headerAction?: React.ReactNode
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  backlog: 'var(--status-backlog)',
   todo: 'var(--status-todo)',
   'in-progress': 'var(--status-in-progress)',
   'in-review': 'var(--status-in-review)',
   done: 'var(--status-done)',
-  cancelled: 'var(--status-cancelled)'
+  archived: 'var(--status-archived)'
 }
 
 export function KanbanColumn({
   status,
   tasks,
   onTaskClick,
+  onMultiSelect,
   onCreateTask,
   selectedTaskId,
+  multiSelectedIds,
   focusedTaskIndex = -1,
   isFocusedColumn = false,
   showCreateInput = false,
-  onCreateInputShown
+  onCreateInputShown,
+  headerAction
 }: KanbanColumnProps): React.JSX.Element {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [isCreating, setIsCreating] = useState(false)
@@ -123,6 +128,7 @@ export function KanbanColumn({
         />
         <span className={styles.statusName}>{COLUMN_LABELS[status]}</span>
         <span className={styles.taskCount}>{tasks.length}</span>
+        {headerAction}
         <button
           className={styles.addButton}
           onClick={handlePlusClick}
@@ -160,7 +166,9 @@ export function KanbanColumn({
                 key={task.id}
                 task={task}
                 onClick={() => onTaskClick(task.id)}
+                onMultiSelect={onMultiSelect}
                 isSelected={selectedTaskId === task.id}
+                isMultiSelected={multiSelectedIds?.has(task.id) ?? false}
                 isFocused={isFocusedColumn && focusedTaskIndex === index}
               />
             ))

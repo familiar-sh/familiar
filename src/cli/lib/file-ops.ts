@@ -7,9 +7,10 @@ import {
   TASKS_DIR,
   TASK_FILE,
   ACTIVITY_FILE,
-  ATTACHMENTS_DIR
+  ATTACHMENTS_DIR,
+  NOTIFICATIONS_FILE
 } from '../../shared/constants'
-import type { ProjectState, Task, ActivityEntry } from '../../shared/types'
+import type { ProjectState, Task, ActivityEntry, AppNotification } from '../../shared/types'
 
 /**
  * Find the project root by walking up from cwd looking for `.kanban-agent/`.
@@ -69,7 +70,26 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
 export async function readProjectState(root: string): Promise<ProjectState> {
   const filePath = getStatePath(root)
   const raw = await fs.readFile(filePath, 'utf-8')
-  return JSON.parse(raw) as ProjectState
+  const state = JSON.parse(raw) as ProjectState
+
+  // Migrate: rename "cancelled" → "archived"
+  let migrated = false
+  const colIdx = state.columnOrder.indexOf('cancelled' as any)
+  if (colIdx !== -1) {
+    state.columnOrder[colIdx] = 'archived'
+    migrated = true
+  }
+  for (const task of state.tasks) {
+    if ((task.status as string) === 'cancelled') {
+      task.status = 'archived'
+      migrated = true
+    }
+  }
+  if (migrated) {
+    await writeProjectState(root, state)
+  }
+
+  return state
 }
 
 export async function writeProjectState(root: string, state: ProjectState): Promise<void> {
@@ -116,4 +136,29 @@ export async function ensureTaskDir(root: string, taskId: string): Promise<void>
 export async function deleteTaskDir(root: string, taskId: string): Promise<void> {
   const dir = getTaskDir(root, taskId)
   await fs.rm(dir, { recursive: true, force: true })
+}
+
+// ─── Notifications ─────────────────────────────────────────────────
+
+function getNotificationsPath(root: string): string {
+  return path.join(getDataPath(root), NOTIFICATIONS_FILE)
+}
+
+export async function readNotifications(root: string): Promise<AppNotification[]> {
+  const filePath = getNotificationsPath(root)
+  try {
+    const raw = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(raw) as AppNotification[]
+  } catch {
+    return []
+  }
+}
+
+export async function appendNotification(
+  root: string,
+  notification: AppNotification
+): Promise<void> {
+  const existing = await readNotifications(root)
+  existing.push(notification)
+  await atomicWriteJson(getNotificationsPath(root), existing)
 }

@@ -21,7 +21,7 @@ export function addCommand(): Command {
     .description('Add a new task to the board')
     .argument('<title>', 'Task title')
     .option('-p, --priority <priority>', 'Priority (urgent, high, medium, low, none)', 'none')
-    .option('-s, --status <status>', 'Initial status (backlog, todo, in-progress, in-review, done, cancelled)', 'backlog')
+    .option('-s, --status <status>', 'Initial status (todo, in-progress, in-review, done, archived)', 'todo')
     .option('-l, --labels <labels>', 'Comma-separated labels')
     .action(async (title: string, opts: { priority: string; status: string; labels?: string }) => {
       const root = getProjectRoot()
@@ -36,7 +36,7 @@ export function addCommand(): Command {
       // Validate status
       if (!isValidTaskStatus(opts.status)) {
         console.error(chalk.red(`Invalid status: ${opts.status}`))
-        console.error(chalk.dim('Valid values: backlog, todo, in-progress, in-review, done, cancelled'))
+        console.error(chalk.dim('Valid values: todo, in-progress, in-review, done, archived'))
         process.exit(1)
       }
 

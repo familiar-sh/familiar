@@ -1,0 +1,169 @@
+/**
+ * Template for AGENTS.md that gets created in .kanban-agent/
+ * when a project is initialized. This file tells AI coding agents
+ * how to interact with the kanban system.
+ */
+export const AGENTS_MD = `# Kanban Agent — Instructions for AI Agents
+
+You are running inside a **Kanban Agent** terminal. This system tracks tasks,
+documents, and activity for an agentic coding workflow.
+
+## Your Context
+
+The environment variable \`KANBAN_TASK_ID\` contains the ID of the task you are
+working on. The variable \`KANBAN_PROJECT_ROOT\` points to the workspace root.
+
+\`\`\`bash
+echo $KANBAN_TASK_ID        # e.g. tsk_a1b2c3d4
+echo $KANBAN_PROJECT_ROOT   # e.g. /Users/me/myproject
+\`\`\`
+
+## CLI — \`kanban-agent\`
+
+Use the \`kanban-agent\` CLI to interact with the system. All commands operate
+on the \`.kanban-agent/\` directory in the project root.
+
+### Read your task
+
+\`\`\`bash
+kanban-agent list --json                         # List all tasks
+kanban-agent list --status in-progress --json    # Filter by status
+\`\`\`
+
+Your task document (markdown notes, specs, etc.) is at:
+\`\`\`
+.kanban-agent/tasks/$KANBAN_TASK_ID/document.md
+\`\`\`
+
+Your task metadata:
+\`\`\`
+.kanban-agent/tasks/$KANBAN_TASK_ID/task.json
+\`\`\`
+
+Activity log:
+\`\`\`
+.kanban-agent/tasks/$KANBAN_TASK_ID/activity.json
+\`\`\`
+
+### Update status
+
+\`\`\`bash
+kanban-agent status $KANBAN_TASK_ID in-progress  # Mark as in progress
+kanban-agent status $KANBAN_TASK_ID in-review    # Ready for review
+kanban-agent status $KANBAN_TASK_ID done         # Complete
+\`\`\`
+
+### Log progress
+
+\`\`\`bash
+kanban-agent log $KANBAN_TASK_ID "Implemented the auth module"
+kanban-agent log $KANBAN_TASK_ID "Fixed failing tests, 12/12 passing"
+\`\`\`
+
+### Send notifications
+
+\`\`\`bash
+kanban-agent notify "Build Complete" "All tests passing on feature-xyz"
+\`\`\`
+
+### Update task fields
+
+\`\`\`bash
+kanban-agent update $KANBAN_TASK_ID --priority high
+kanban-agent update $KANBAN_TASK_ID --agent-status running
+kanban-agent update $KANBAN_TASK_ID --agent-status done
+kanban-agent update $KANBAN_TASK_ID --agent-status error
+kanban-agent update $KANBAN_TASK_ID --labels "backend,auth"
+\`\`\`
+
+### Create new tasks
+
+\`\`\`bash
+kanban-agent add "Fix login redirect bug" --priority high --status todo
+kanban-agent add "Write unit tests for auth" --labels "testing"
+\`\`\`
+
+## Status Management
+
+**IMPORTANT: Always update your task status to \`in-progress\` as the very first thing you do when you start working on a task.** Do not skip this step.
+
+### Task Status (column on the board)
+
+Use \`kanban-agent status <id> <status>\` to move your task between columns:
+
+| Status | Meaning | When to set |
+|--------|---------|-------------|
+| \`backlog\` | Not yet planned | Rarely used by agents |
+| \`todo\` | Planned but not started | Default for new tasks |
+| \`in-progress\` | **Actively being worked on** | **Set this FIRST when you begin work** |
+| \`in-review\` | Work done, waiting for human review | Set when your work is complete and ready for the user to review |
+| \`done\` | Completed and accepted | Usually set by the user after reviewing |
+| \`archived\` | No longer relevant | Rarely used by agents |
+
+### Agent Status (shows agent state on the card)
+
+Use \`kanban-agent update <id> --agent-status <status>\` to show your runtime state:
+
+| Agent Status | Meaning | When to set |
+|-------------|---------|-------------|
+| \`idle\` | Agent is not running | Default state |
+| \`running\` | Agent is actively working | Set alongside \`in-progress\` |
+| \`done\` | Agent finished successfully | Set when work is complete |
+| \`error\` | Agent encountered a failure | Set when something went wrong |
+
+### Rules
+
+- **Do NOT** use \`kanban-agent log\` to record status changes — use \`kanban-agent status\` and \`kanban-agent update --agent-status\` instead.
+- **Do** use \`kanban-agent log\` only for progress notes describing what you did or what happened.
+- **Always** set both task status and agent-status together (e.g., \`in-progress\` + \`running\`, \`in-review\` + \`done\`).
+
+## Best Practices
+
+1. **Set your status to \`in-progress\`** and agent-status to \`running\` as the **first thing** when you start working
+2. **Log progress** at meaningful milestones so the human can follow along
+3. **Read your task document** — it may contain specs, acceptance criteria, or context
+4. **Send notifications** for important events (build failures, completion, blockers)
+5. **Set status to \`in-review\`** and agent-status to \`done\` when finished — let the user move it to \`done\`
+
+## Recommended Workflow
+
+\`\`\`bash
+# 1. FIRST THING: Mark yourself as working (do this BEFORE anything else)
+kanban-agent status $KANBAN_TASK_ID in-progress
+kanban-agent update $KANBAN_TASK_ID --agent-status running
+kanban-agent log $KANBAN_TASK_ID "Starting work"
+
+# 2. Read the task document for context
+cat .kanban-agent/tasks/$KANBAN_TASK_ID/document.md
+
+# 3. Do your work, logging progress (NOT status changes)
+kanban-agent log $KANBAN_TASK_ID "Implemented the auth module"
+# ... more work ...
+kanban-agent log $KANBAN_TASK_ID "Running tests — 12/12 passing"
+
+# 4. On success: update status, then notify
+kanban-agent status $KANBAN_TASK_ID in-review
+kanban-agent update $KANBAN_TASK_ID --agent-status done
+kanban-agent log $KANBAN_TASK_ID "Complete — ready for review"
+kanban-agent notify "Task Complete" "$KANBAN_TASK_ID done"
+
+# 5. On failure: update status, then notify
+kanban-agent update $KANBAN_TASK_ID --agent-status error
+kanban-agent log $KANBAN_TASK_ID "ERROR: Tests failed — see terminal output"
+kanban-agent notify "Task Failed" "Error on $KANBAN_TASK_ID"
+\`\`\`
+
+## File Structure
+
+\`\`\`
+.kanban-agent/
+├── AGENTS.md            # This file
+├── state.json           # All tasks and project config
+└── tasks/
+    └── <taskId>/
+        ├── task.json    # Task metadata (status, priority, labels)
+        ├── document.md  # Task document (specs, notes)
+        ├── activity.json # Activity/progress log
+        └── attachments/ # Images and files
+\`\`\`
+`

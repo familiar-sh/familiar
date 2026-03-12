@@ -23,7 +23,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 'tsk_test01',
     title: 'Test task',
-    status: 'backlog',
+    status: 'todo',
     priority: 'none',
     labels: [],
     agentStatus: 'idle',
@@ -34,7 +34,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   }
 }
 
-const COLUMN_ORDER: TaskStatus[] = ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled']
+const COLUMN_ORDER: TaskStatus[] = ['todo', 'in-progress', 'in-review', 'done', 'archived']
 
 function fireKey(key: string): void {
   const event = new KeyboardEvent('keydown', { key, bubbles: true })
@@ -42,17 +42,16 @@ function fireKey(key: string): void {
 }
 
 describe('useKeyboardNavigation', () => {
-  const task1 = makeTask({ id: 'tsk_a', status: 'backlog', sortOrder: 0 })
-  const task2 = makeTask({ id: 'tsk_b', status: 'backlog', sortOrder: 1 })
-  const task3 = makeTask({ id: 'tsk_c', status: 'todo', sortOrder: 0 })
+  const task1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+  const task2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1 })
+  const task3 = makeTask({ id: 'tsk_c', status: 'in-progress', sortOrder: 0 })
 
   const tasksByStatus: Record<string, Task[]> = {
-    backlog: [task1, task2],
-    todo: [task3],
-    'in-progress': [],
+    todo: [task1, task2],
+    'in-progress': [task3],
     'in-review': [],
     done: [],
-    cancelled: []
+    archived: []
   }
 
   beforeEach(() => {

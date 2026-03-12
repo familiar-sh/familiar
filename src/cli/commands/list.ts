@@ -6,12 +6,11 @@ import { isValidTaskStatus, isValidPriority } from '../../shared/utils/validator
 import { getProjectRoot, readProjectState } from '../lib/file-ops'
 
 const STATUS_COLORS: Record<TaskStatus, (s: string) => string> = {
-  backlog: chalk.gray,
   todo: chalk.blue,
   'in-progress': chalk.yellow,
   'in-review': chalk.magenta,
   done: chalk.green,
-  cancelled: chalk.strikethrough.gray
+  archived: chalk.strikethrough.gray
 }
 
 const PRIORITY_COLORS: Record<Priority, (s: string) => string> = {

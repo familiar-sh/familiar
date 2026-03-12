@@ -1,7 +1,10 @@
 /* TaskDetail — full overlay panel */
 .overlay {
   position: fixed;
-  inset: 0;
+  top: 40px; /* below the persistent navbar */
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: var(--z-modal);
   display: flex;
   flex-direction: column;

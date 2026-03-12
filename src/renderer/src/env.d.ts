@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { ProjectState, Task, ActivityEntry } from '../../shared/types'
+import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification } from '../../shared/types'
 
 declare global {
   interface Window {
@@ -47,9 +47,17 @@ declare global {
       tmuxList(): Promise<string[]>
       tmuxAttach(name: string): Promise<void>
       tmuxDetach(name: string): Promise<void>
+      tmuxKill(name: string): Promise<void>
+      tmuxHas(name: string): Promise<boolean>
 
       // Notifications
       sendNotification(title: string, body: string): Promise<void>
+      listNotifications(): Promise<AppNotification[]>
+      markNotificationRead(id: string): Promise<void>
+      markNotificationsByTaskRead(taskId: string): Promise<void>
+      markAllNotificationsRead(): Promise<void>
+      clearNotifications(): Promise<void>
+      appendNotification(notification: AppNotification): Promise<void>
 
       // Window
       openDirectory(): Promise<string | null>
@@ -59,6 +67,10 @@ declare global {
       // File watching
       watchProjectDir(callback: () => void): () => void
       unwatchProjectDir(): void
+
+      // Settings
+      readSettings(): Promise<ProjectSettings>
+      writeSettings(settings: ProjectSettings): Promise<void>
 
       // App info
       getVersion(): Promise<string>

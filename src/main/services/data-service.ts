@@ -1,5 +1,6 @@
 import { ElectronFileSystem } from '../platform/electron-file-system'
-import type { ProjectState, Task, ActivityEntry } from '../../shared/types'
+import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification } from '../../shared/types'
+import { DEFAULT_SETTINGS } from '../../shared/types'
 import {
   DATA_DIR,
   STATE_FILE,
@@ -8,9 +9,12 @@ import {
   DOCUMENT_FILE,
   ACTIVITY_FILE,
   ATTACHMENTS_DIR,
+  SETTINGS_FILE,
+  NOTIFICATIONS_FILE,
   DEFAULT_COLUMNS
 } from '../../shared/constants'
 import path from 'path'
+import { AGENTS_MD } from '../../shared/agent-instructions'
 
 export class DataService {
   private fs: ElectronFileSystem
@@ -38,10 +42,40 @@ export class DataService {
   async readProjectState(): Promise<ProjectState> {
     const filePath = this.getDataPath(STATE_FILE)
     const raw = await this.fs.readFile(filePath)
-    return JSON.parse(raw) as ProjectState
+    const state = JSON.parse(raw) as ProjectState
+
+    // Migrate: rename "cancelled" → "archived"
+    let migrated = false
+    const colIdx = state.columnOrder.indexOf('cancelled' as any)
+    if (colIdx !== -1) {
+      state.columnOrder[colIdx] = 'archived'
+      migrated = true
+    }
+    for (const task of state.tasks) {
+      if ((task.status as string) === 'cancelled') {
+        task.status = 'archived'
+        migrated = true
+      }
+    }
+    if (migrated) {
+      await this.writeProjectState(state)
+    }
+
+    return state
   }
 
   async writeProjectState(state: ProjectState): Promise<void> {
+    // Migrate: ensure "cancelled" is never written back
+    const colIdx = state.columnOrder.indexOf('cancelled' as any)
+    if (colIdx !== -1) {
+      state.columnOrder[colIdx] = 'archived'
+    }
+    for (const task of state.tasks) {
+      if ((task.status as string) === 'cancelled') {
+        task.status = 'archived'
+      }
+    }
+
     const filePath = this.getDataPath(STATE_FILE)
     await this.fs.writeFileAtomic(filePath, JSON.stringify(state, null, 2))
   }
@@ -146,11 +180,93 @@ export class DataService {
     }
 
     await this.writeProjectState(state)
+
+    // Write AGENTS.md for AI coding agents
+    await this.fs.writeFile(this.getDataPath('AGENTS.md'), AGENTS_MD)
+
+    // Write default settings
+    await this.writeSettings(DEFAULT_SETTINGS)
+
     return state
   }
 
   async isInitialized(): Promise<boolean> {
     const stateFile = this.getDataPath(STATE_FILE)
     return this.fs.exists(stateFile)
+  }
+
+  // ─── Settings ──────────────────────────────────────────────────────
+
+  async readSettings(): Promise<ProjectSettings> {
+    const filePath = this.getDataPath(SETTINGS_FILE)
+    try {
+      const raw = await this.fs.readFile(filePath)
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } as ProjectSettings
+    } catch {
+      return { ...DEFAULT_SETTINGS }
+    }
+  }
+
+  async writeSettings(settings: ProjectSettings): Promise<void> {
+    const filePath = this.getDataPath(SETTINGS_FILE)
+    await this.fs.writeFileAtomic(filePath, JSON.stringify(settings, null, 2))
+  }
+
+  // ─── Notifications ───────────────────────────────────────────────
+
+  async readNotifications(): Promise<AppNotification[]> {
+    const filePath = this.getDataPath(NOTIFICATIONS_FILE)
+    try {
+      const raw = await this.fs.readFile(filePath)
+      return JSON.parse(raw) as AppNotification[]
+    } catch {
+      return []
+    }
+  }
+
+  async writeNotifications(notifications: AppNotification[]): Promise<void> {
+    const filePath = this.getDataPath(NOTIFICATIONS_FILE)
+    await this.fs.writeFileAtomic(filePath, JSON.stringify(notifications, null, 2))
+  }
+
+  async appendNotification(notification: AppNotification): Promise<void> {
+    const notifications = await this.readNotifications()
+    notifications.push(notification)
+    await this.writeNotifications(notifications)
+  }
+
+  async markNotificationRead(id: string): Promise<void> {
+    const notifications = await this.readNotifications()
+    const notification = notifications.find((n) => n.id === id)
+    if (notification) {
+      notification.read = true
+      await this.writeNotifications(notifications)
+    }
+  }
+
+  async markNotificationsByTaskRead(taskId: string): Promise<void> {
+    const notifications = await this.readNotifications()
+    let changed = false
+    for (const n of notifications) {
+      if (n.taskId === taskId && !n.read) {
+        n.read = true
+        changed = true
+      }
+    }
+    if (changed) {
+      await this.writeNotifications(notifications)
+    }
+  }
+
+  async markAllNotificationsRead(): Promise<void> {
+    const notifications = await this.readNotifications()
+    for (const n of notifications) {
+      n.read = true
+    }
+    await this.writeNotifications(notifications)
+  }
+
+  async clearNotifications(): Promise<void> {
+    await this.writeNotifications([])
   }
 }

@@ -19,9 +19,25 @@ interface TaskStore {
   moveTask: (taskId: string, newStatus: TaskStatus, newSortOrder: number) => Promise<void>
   reorderTask: (taskId: string, newSortOrder: number) => Promise<void>
 
+  // Bulk actions
+  moveTasks: (taskIds: string[], newStatus: TaskStatus, startIndex: number) => Promise<void>
+  archiveAllDone: () => Promise<void>
+
   // Helpers
   getTasksByStatus: (status: TaskStatus) => Task[]
   getTaskById: (taskId: string) => Task | undefined
+}
+
+async function killTmuxSessionsForTask(taskId: string): Promise<void> {
+  try {
+    const sessions = await window.api.tmuxList()
+    const taskSessions = sessions.filter((s) => s.startsWith(`kanban-${taskId}`))
+    for (const session of taskSessions) {
+      await window.api.tmuxKill(session).catch(() => {})
+    }
+  } catch {
+    // tmux may not be available — ignore
+  }
 }
 
 function generateTaskId(): string {
@@ -101,14 +117,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
     const now = new Date().toISOString()
     const existingTasks = projectState.tasks.filter(
-      (t: Task) => t.status === (options?.status ?? 'backlog')
+      (t: Task) => t.status === (options?.status ?? 'todo')
     )
     const maxSort = existingTasks.reduce((max: number, t: Task) => Math.max(max, t.sortOrder), -1)
 
     const task: Task = {
       id: generateTaskId(),
       title,
-      status: 'backlog',
+      status: 'todo',
       priority: 'none',
       labels: [],
       agentStatus: 'idle',
@@ -138,6 +154,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
     const updatedTask = { ...task, updatedAt: new Date().toISOString() }
 
+    // Kill tmux sessions and reset agent status when archiving
+    if (updatedTask.status === 'archived') {
+      await killTmuxSessionsForTask(updatedTask.id)
+      updatedTask.agentStatus = 'idle'
+    }
+
     // Persist task file
     await window.api.updateTask(updatedTask)
 
@@ -151,6 +173,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   deleteTask: async (taskId: string): Promise<void> => {
     const { projectState } = get()
     if (!projectState) throw new Error('Project not initialized')
+
+    // Kill tmux sessions before deleting
+    await killTmuxSessionsForTask(taskId)
 
     // Delete task files
     await window.api.deleteTask(taskId)
@@ -210,8 +235,16 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       return t
     })
 
+    // Kill tmux sessions and reset agent status when archiving
+    if (newStatus === 'archived') {
+      await killTmuxSessionsForTask(taskId)
+    }
+
     const newState: ProjectState = { ...projectState, tasks: updatedTasks }
     const movedTask = updatedTasks.find((t: Task) => t.id === taskId)!
+    if (newStatus === 'archived') {
+      movedTask.agentStatus = 'idle'
+    }
     await window.api.updateTask(movedTask)
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
@@ -251,6 +284,115 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const newState: ProjectState = { ...projectState, tasks: updatedTasks }
     const reorderedTask = updatedTasks.find((t: Task) => t.id === taskId)!
     await window.api.updateTask(reorderedTask)
+    await window.api.writeProjectState(newState)
+    set({ projectState: newState })
+  },
+
+  // Bulk actions
+  moveTasks: async (
+    taskIds: string[],
+    newStatus: TaskStatus,
+    startIndex: number
+  ): Promise<void> => {
+    const { projectState } = get()
+    if (!projectState) throw new Error('Project not initialized')
+
+    const taskIdSet = new Set(taskIds)
+
+    // Get target column tasks excluding the ones being moved
+    const targetColumnTasks = projectState.tasks
+      .filter((t: Task) => t.status === newStatus && !taskIdSet.has(t.id))
+      .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
+
+    // Insert moved tasks at the target index
+    const clampedIndex = Math.min(startIndex, targetColumnTasks.length)
+    const movedTasks = taskIds
+      .map((id) => projectState.tasks.find((t: Task) => t.id === id))
+      .filter((t): t is Task => t !== undefined)
+    targetColumnTasks.splice(clampedIndex, 0, ...movedTasks)
+
+    // Build sort updates for the target column
+    const sortUpdates = new Map<string, number>()
+    for (let i = 0; i < targetColumnTasks.length; i++) {
+      sortUpdates.set(targetColumnTasks[i].id, i)
+    }
+
+    // Re-index source columns (each moved task may come from a different column)
+    const sourceStatuses = new Set(movedTasks.map((t) => t.status))
+    for (const srcStatus of sourceStatuses) {
+      if (srcStatus === newStatus) continue
+      const srcTasks = projectState.tasks
+        .filter((t: Task) => t.status === srcStatus && !taskIdSet.has(t.id))
+        .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
+      for (let i = 0; i < srcTasks.length; i++) {
+        sortUpdates.set(srcTasks[i].id, i)
+      }
+    }
+
+    const now = new Date().toISOString()
+    const updatedTasks = projectState.tasks.map((t: Task) => {
+      if (taskIdSet.has(t.id)) {
+        const newSort = sortUpdates.get(t.id)
+        return { ...t, status: newStatus, sortOrder: newSort ?? 0, updatedAt: now }
+      }
+      const newSort = sortUpdates.get(t.id)
+      if (newSort !== undefined && newSort !== t.sortOrder) {
+        return { ...t, sortOrder: newSort, updatedAt: now }
+      }
+      return t
+    })
+
+    // Kill tmux sessions and reset agent status when archiving
+    if (newStatus === 'archived') {
+      for (const id of taskIds) {
+        await killTmuxSessionsForTask(id)
+      }
+    }
+
+    const newState: ProjectState = { ...projectState, tasks: updatedTasks }
+
+    // Persist each moved task (reset agentStatus if archiving)
+    for (const id of taskIds) {
+      const updated = updatedTasks.find((t: Task) => t.id === id)
+      if (updated) {
+        if (newStatus === 'archived') {
+          updated.agentStatus = 'idle'
+        }
+        await window.api.updateTask(updated)
+      }
+    }
+    await window.api.writeProjectState(newState)
+    set({ projectState: newState })
+  },
+
+  archiveAllDone: async (): Promise<void> => {
+    const { projectState } = get()
+    if (!projectState) throw new Error('Project not initialized')
+
+    const doneTasks = projectState.tasks.filter((t: Task) => t.status === 'done')
+    if (doneTasks.length === 0) return
+
+    // Kill tmux sessions for all tasks being archived
+    for (const task of doneTasks) {
+      await killTmuxSessionsForTask(task.id)
+    }
+
+    const now = new Date().toISOString()
+    const updatedTasks = projectState.tasks.map((t: Task) => {
+      if (t.status === 'done') {
+        return { ...t, status: 'archived' as TaskStatus, agentStatus: 'idle' as const, updatedAt: now }
+      }
+      return t
+    })
+
+    const newState: ProjectState = { ...projectState, tasks: updatedTasks }
+
+    // Persist each moved task
+    for (const task of updatedTasks) {
+      if (task.status === 'archived' && doneTasks.some((d) => d.id === task.id)) {
+        await window.api.updateTask(task)
+      }
+    }
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
   },

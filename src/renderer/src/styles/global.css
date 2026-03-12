@@ -33,12 +33,11 @@
   --border-hover: #3a3a50;
 
   /* ---- Status colors ---- */
-  --status-backlog: #5c5c6e;
   --status-todo: #f0f0f4;
   --status-in-progress: #f2c94c;
   --status-in-review: #5e6ad2;
   --status-done: #27ae60;
-  --status-cancelled: #e74c3c;
+  --status-archived: #6b7280;
 
   /* ---- Priority colors ---- */
   --priority-urgent: #e74c3c;

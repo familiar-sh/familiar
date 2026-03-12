@@ -4,12 +4,11 @@ import { DEFAULT_COLUMNS, COLUMN_LABELS } from '@shared/constants'
 import styles from './StatusSelect.module.css'
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  backlog: 'var(--status-backlog)',
   todo: 'var(--status-todo)',
   'in-progress': 'var(--status-in-progress)',
   'in-review': 'var(--status-in-review)',
   done: 'var(--status-done)',
-  cancelled: 'var(--status-cancelled)'
+  archived: 'var(--status-archived)'
 }
 
 interface StatusSelectProps {

@@ -23,7 +23,7 @@ function makeProjectState(tasks: Task[] = []): ProjectState {
     version: 1,
     projectName: 'test',
     tasks,
-    columnOrder: ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled'],
+    columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
     labels: []
   }
 }
@@ -32,7 +32,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 'tsk_test01',
     title: 'Test task',
-    status: 'backlog',
+    status: 'todo',
     priority: 'none',
     labels: [],
     agentStatus: 'idle',
@@ -97,7 +97,7 @@ describe('useTaskStore', () => {
 
       expect(task.title).toBe('New task')
       expect(task.id).toMatch(/^tsk_/)
-      expect(task.status).toBe('backlog')
+      expect(task.status).toBe('todo')
       expect(mockApi.createTask).toHaveBeenCalledWith(expect.objectContaining({ title: 'New task' }))
       expect(mockApi.writeProjectState).toHaveBeenCalled()
       expect(useTaskStore.getState().projectState!.tasks).toHaveLength(1)
@@ -108,7 +108,7 @@ describe('useTaskStore', () => {
     })
 
     it('calculates sort order based on existing tasks in column', async () => {
-      const existing = makeTask({ status: 'backlog', sortOrder: 5 })
+      const existing = makeTask({ status: 'todo', sortOrder: 5 })
       const state = makeProjectState([existing])
       useTaskStore.setState({ projectState: state })
       mockApi.createTask.mockResolvedValue(undefined)
@@ -164,7 +164,7 @@ describe('useTaskStore', () => {
 
   describe('moveTask', () => {
     it('changes status and sort order', async () => {
-      const task = makeTask({ status: 'backlog', sortOrder: 0 })
+      const task = makeTask({ status: 'todo', sortOrder: 0 })
       const state = makeProjectState([task])
       useTaskStore.setState({ projectState: state })
       mockApi.updateTask.mockResolvedValue(undefined)
@@ -178,20 +178,20 @@ describe('useTaskStore', () => {
     })
 
     it('inserts at correct position among existing tasks', async () => {
-      const t1 = makeTask({ id: 'tsk_a', status: 'backlog', sortOrder: 0 })
-      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 0 })
-      const t3 = makeTask({ id: 'tsk_c', status: 'todo', sortOrder: 1 })
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'in-progress', sortOrder: 0 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'in-progress', sortOrder: 1 })
       const state = makeProjectState([t1, t2, t3])
       useTaskStore.setState({ projectState: state })
       mockApi.updateTask.mockResolvedValue(undefined)
       mockApi.writeProjectState.mockResolvedValue(undefined)
 
-      // Move t1 from backlog to todo at index 1 (between t2 and t3)
-      await useTaskStore.getState().moveTask('tsk_a', 'todo', 1)
+      // Move t1 from todo to in-progress at index 1 (between t2 and t3)
+      await useTaskStore.getState().moveTask('tsk_a', 'in-progress', 1)
 
       const tasks = useTaskStore.getState().projectState!.tasks
       const movedTask = tasks.find((t) => t.id === 'tsk_a')!
-      expect(movedTask.status).toBe('todo')
+      expect(movedTask.status).toBe('in-progress')
       expect(movedTask.sortOrder).toBe(1)
 
       // t2 stays at 0, t3 shifts to 2

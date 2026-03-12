@@ -24,7 +24,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 'tsk_test01',
     title: 'Test task',
-    status: 'backlog',
+    status: 'todo',
     priority: 'none',
     labels: [],
     agentStatus: 'idle',
@@ -40,7 +40,7 @@ function makeProjectState(tasks: Task[] = []): ProjectState {
     version: 1,
     projectName: 'test',
     tasks,
-    columnOrder: ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled'],
+    columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
     labels: []
   }
 }
@@ -74,38 +74,37 @@ describe('KanbanBoard', () => {
     expect(screen.getByText('Open Workspace')).toBeInTheDocument()
   })
 
-  it('renders all 6 columns', () => {
+  it('renders all 5 columns', () => {
     const state = makeProjectState()
     useTaskStore.setState({ isLoading: false, projectState: state })
     render(<KanbanBoard />)
 
-    expect(screen.getByText('Backlog')).toBeInTheDocument()
     expect(screen.getByText('Todo')).toBeInTheDocument()
     expect(screen.getByText('In Progress')).toBeInTheDocument()
     expect(screen.getByText('In Review')).toBeInTheDocument()
     expect(screen.getByText('Done')).toBeInTheDocument()
-    expect(screen.getByText('Cancelled')).toBeInTheDocument()
+    expect(screen.getByText('Archive')).toBeInTheDocument()
   })
 
   it('renders tasks in correct columns', () => {
     const tasks = [
-      makeTask({ id: 'tsk_a', title: 'Backlog task', status: 'backlog' }),
-      makeTask({ id: 'tsk_b', title: 'Todo task', status: 'todo' }),
+      makeTask({ id: 'tsk_a', title: 'Todo task 1', status: 'todo' }),
+      makeTask({ id: 'tsk_b', title: 'In Progress task', status: 'in-progress' }),
       makeTask({ id: 'tsk_c', title: 'Done task', status: 'done' })
     ]
     const state = makeProjectState(tasks)
     useTaskStore.setState({ isLoading: false, projectState: state })
     render(<KanbanBoard />)
 
-    expect(screen.getByText('Backlog task')).toBeInTheDocument()
-    expect(screen.getByText('Todo task')).toBeInTheDocument()
+    expect(screen.getByText('Todo task 1')).toBeInTheDocument()
+    expect(screen.getByText('In Progress task')).toBeInTheDocument()
     expect(screen.getByText('Done task')).toBeInTheDocument()
   })
 
   it('filters tasks by search', () => {
     const tasks = [
-      makeTask({ id: 'tsk_a', title: 'Fix authentication bug', status: 'backlog' }),
-      makeTask({ id: 'tsk_b', title: 'Add new feature', status: 'backlog' })
+      makeTask({ id: 'tsk_a', title: 'Fix authentication bug', status: 'todo' }),
+      makeTask({ id: 'tsk_b', title: 'Add new feature', status: 'todo' })
     ]
     const state = makeProjectState(tasks)
     useTaskStore.setState({ isLoading: false, projectState: state })
@@ -121,8 +120,8 @@ describe('KanbanBoard', () => {
 
   it('filters tasks by priority', () => {
     const tasks = [
-      makeTask({ id: 'tsk_a', title: 'Urgent fix', status: 'backlog', priority: 'urgent' }),
-      makeTask({ id: 'tsk_b', title: 'Low priority', status: 'backlog', priority: 'low' })
+      makeTask({ id: 'tsk_a', title: 'Urgent fix', status: 'todo', priority: 'urgent' }),
+      makeTask({ id: 'tsk_b', title: 'Low priority', status: 'todo', priority: 'low' })
     ]
     const state = makeProjectState(tasks)
     useTaskStore.setState({ isLoading: false, projectState: state })
@@ -155,7 +154,7 @@ describe('KanbanBoard', () => {
 
   it('shows all tasks when no filters active', () => {
     const tasks = [
-      makeTask({ id: 'tsk_a', title: 'Task A', status: 'backlog' }),
+      makeTask({ id: 'tsk_a', title: 'Task A', status: 'todo' }),
       makeTask({ id: 'tsk_b', title: 'Task B', status: 'todo' })
     ]
     const state = makeProjectState(tasks)

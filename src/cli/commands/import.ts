@@ -36,7 +36,7 @@ function parseMarkdownTasks(content: string): ParsedTask[] {
       tasks.push({
         title: checkboxMatch[1].trim(),
         priority: 'none',
-        status: isChecked ? 'done' : 'backlog'
+        status: isChecked ? 'done' : 'todo'
       })
       continue
     }
@@ -47,7 +47,7 @@ function parseMarkdownTasks(content: string): ParsedTask[] {
       tasks.push({
         title: headingMatch[1].trim(),
         priority: 'none',
-        status: 'backlog'
+        status: 'todo'
       })
       continue
     }
@@ -61,7 +61,7 @@ function parseMarkdownTasks(content: string): ParsedTask[] {
         tasks.push({
           title: titleCandidate,
           priority: 'none',
-          status: 'backlog'
+          status: 'todo'
         })
       }
       continue

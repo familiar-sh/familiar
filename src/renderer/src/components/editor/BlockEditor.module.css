@@ -78,6 +78,12 @@
   color: var(--text-tertiary) !important;
 }
 
+/* Remove focus outline from BlockNote editable area */
+.editorWrapper [class*='bn-editor']:focus-visible,
+.editorWrapper [contenteditable]:focus-visible {
+  outline: none;
+}
+
 /* Lists */
 .editorWrapper ul,
 .editorWrapper ol {

@@ -1,21 +1,19 @@
 import type { TaskStatus, Priority, AgentStatus } from './types'
 
 export const DEFAULT_COLUMNS: TaskStatus[] = [
-  'backlog',
   'todo',
   'in-progress',
   'in-review',
   'done',
-  'cancelled'
+  'archived'
 ]
 
 export const COLUMN_LABELS: Record<TaskStatus, string> = {
-  backlog: 'Backlog',
   todo: 'Todo',
   'in-progress': 'In Progress',
   'in-review': 'In Review',
   done: 'Done',
-  cancelled: 'Cancelled'
+  archived: 'Archive'
 }
 
 export const PRIORITY_ORDER: Record<Priority, number> = {
@@ -49,5 +47,7 @@ export const TASK_FILE = 'task.json'
 export const DOCUMENT_FILE = 'document.md'
 export const ACTIVITY_FILE = 'activity.json'
 export const ATTACHMENTS_DIR = 'attachments'
+export const SETTINGS_FILE = 'settings.json'
+export const NOTIFICATIONS_FILE = 'notifications.json'
 
 export const APP_NAME = 'Kanban Agent'

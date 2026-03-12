@@ -7,8 +7,7 @@ import {
   useSensor,
   useSensors,
   pointerWithin,
-  rectIntersection,
-  getFirstCollision
+  rectIntersection
 } from '@dnd-kit/core'
 import type {
   DragStartEvent,
@@ -24,16 +23,25 @@ import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useBoardStore } from '@renderer/stores/board-store'
 import { useKeyboardNavigation } from '@renderer/hooks/useKeyboardNavigation'
+import { useMarqueeSelection } from '@renderer/hooks/useMarqueeSelection'
 import { LoadingSpinner } from '@renderer/components/common'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
 import styles from './KanbanBoard.module.css'
 
 export function KanbanBoard(): React.JSX.Element {
-  const { projectState, isLoading, addTask, moveTask, reorderTask } = useTaskStore()
+  const { projectState, isLoading, addTask, moveTask, moveTasks, reorderTask, archiveAllDone } =
+    useTaskStore()
   const { filters, openTaskDetail, activeTaskId, focusedColumnIndex, focusedTaskIndex } =
     useUIStore()
-  const { setDraggedTask, setDragOverColumn } = useBoardStore()
+  const {
+    setDraggedTask,
+    setDragOverColumn,
+    selectedTaskIds,
+    toggleTaskSelection,
+    setSelectedTaskIds,
+    clearSelection
+  } = useBoardStore()
 
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [createColumnIndex, setCreateColumnIndex] = useState<number | null>(null)
@@ -51,22 +59,32 @@ export function KanbanBoard(): React.JSX.Element {
 
   // Custom collision detection: prefer pointerWithin (detects the column the pointer
   // is inside), then fall back to rectIntersection for edge cases (e.g. fast drags).
+  // Active item is excluded to prevent self-collision no-ops.
   const collisionDetection: CollisionDetection = useCallback((args) => {
-    // First try pointerWithin — this reliably detects which column droppable
-    // the pointer is currently inside, even for empty columns.
+    const activeId = args.active.id
     const pointerCollisions = pointerWithin(args)
     if (pointerCollisions.length > 0) {
-      // Prefer sortable items over column droppables when both are detected,
-      // so that drop-between-cards positioning works correctly.
-      const firstCollision = getFirstCollision(pointerCollisions, 'id')
-      if (firstCollision) {
-        return [firstCollision]
+      // Filter out the active (dragged) item — its droppable stays registered
+      // at the original DOM position and can cause false self-collisions.
+      const filtered = pointerCollisions.filter((c) => c.id !== activeId)
+      if (filtered.length > 0) {
+        // Prefer sortable task items over column droppables so that
+        // drop-between-cards positioning works correctly.
+        const taskCollision = filtered.find(
+          (c) => !(c.id as string).startsWith('column-')
+        )
+        return [taskCollision ?? filtered[0]]
       }
-      return pointerCollisions
+      // Only self-collision detected — fall back to column collision
+      const columnCollision = pointerCollisions.find(
+        (c) => (c.id as string).startsWith('column-')
+      )
+      if (columnCollision) return [columnCollision]
     }
 
-    // Fallback to rect intersection
-    return rectIntersection(args)
+    // Fallback to rect intersection for fast drags (also excluding active item)
+    const rectCollisions = rectIntersection(args)
+    return rectCollisions.filter((c) => c.id !== activeId)
   }, [])
 
   // Filter tasks using shared utility
@@ -102,11 +120,40 @@ export function KanbanBoard(): React.JSX.Element {
     onCreateTask: handleKeyboardCreate
   })
 
+  // Marquee (lasso) selection
+  const handleMarqueeSelect = useCallback(
+    (ids: Set<string>) => {
+      setSelectedTaskIds(ids)
+    },
+    [setSelectedTaskIds]
+  )
+
+  const { containerRef, marqueeRect, isSelecting, handleMouseDown, consumeMarqueeClick } = useMarqueeSelection({
+    itemSelector: '[data-task-id]',
+    onSelect: handleMarqueeSelect
+  })
+
+  // Sync containerRef with the board div
+  const boardRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      containerRef.current = node
+    },
+    [containerRef]
+  )
+
   const handleTaskClick = useCallback(
     (taskId: string) => {
+      clearSelection()
       openTaskDetail(taskId)
     },
-    [openTaskDetail]
+    [openTaskDetail, clearSelection]
+  )
+
+  const handleMultiSelect = useCallback(
+    (taskId: string, append: boolean) => {
+      toggleTaskSelection(taskId, append)
+    },
+    [toggleTaskSelection]
   )
 
   const handleCreateTask = useCallback(
@@ -146,9 +193,13 @@ export function KanbanBoard(): React.JSX.Element {
       if (task) {
         setActiveTask(task)
         setDraggedTask(task.id)
+        // If dragging a task not in the selection, clear selection and select only this task
+        if (!selectedTaskIds.has(task.id)) {
+          clearSelection()
+        }
       }
     },
-    [findTask, setDraggedTask]
+    [findTask, setDraggedTask, selectedTaskIds, clearSelection]
   )
 
   const handleDragOver = useCallback(
@@ -187,16 +238,17 @@ export function KanbanBoard(): React.JSX.Element {
       const activeId = active.id as string
       const overId = over.id as string
 
+      // Dropped on itself — no-op (single card only)
+      if (activeId === overId && selectedTaskIds.size <= 1) return
+
       // Determine target column
       let targetStatus: TaskStatus
       let targetIndex: number
 
       if (overId.startsWith('column-')) {
-        // Dropped on column itself — append at end
         targetStatus = overId.replace('column-', '') as TaskStatus
         targetIndex = (tasksByStatus[targetStatus] ?? []).length
       } else {
-        // Dropped on another task
         const col = findTaskColumn(overId)
         if (!col) return
         targetStatus = col
@@ -205,19 +257,44 @@ export function KanbanBoard(): React.JSX.Element {
         targetIndex = overIndex >= 0 ? overIndex : targetTasks.length
       }
 
-      const sourceColumn = findTaskColumn(activeId)
-      if (!sourceColumn) return
+      // Multi-select: move all selected tasks together
+      const draggedIds =
+        selectedTaskIds.has(activeId) && selectedTaskIds.size > 1
+          ? Array.from(selectedTaskIds)
+          : [activeId]
 
-      if (sourceColumn === targetStatus) {
-        // Same column reorder
-        await reorderTask(activeId, targetIndex)
+      if (draggedIds.length > 1) {
+        await moveTasks(draggedIds, targetStatus, targetIndex)
+        clearSelection()
       } else {
-        // Move to different column
-        await moveTask(activeId, targetStatus, targetIndex)
+        const sourceColumn = findTaskColumn(activeId)
+        if (!sourceColumn) return
+
+        if (sourceColumn === targetStatus) {
+          await reorderTask(activeId, targetIndex)
+        } else {
+          await moveTask(activeId, targetStatus, targetIndex)
+        }
       }
     },
-    [tasksByStatus, findTaskColumn, moveTask, reorderTask, setDraggedTask, setDragOverColumn]
+    [
+      tasksByStatus,
+      findTaskColumn,
+      moveTask,
+      moveTasks,
+      reorderTask,
+      setDraggedTask,
+      setDragOverColumn,
+      selectedTaskIds,
+      clearSelection
+    ]
   )
+
+  const handleArchiveDone = useCallback(async () => {
+    const doneTasks = (tasksByStatus['done'] ?? [])
+    if (doneTasks.length === 0) return
+    await archiveAllDone()
+  }, [tasksByStatus, archiveAllDone])
 
   const handleOpenWorkspace = useCallback(async () => {
     const { openWorkspace } = useTaskStore.getState()
@@ -262,25 +339,61 @@ export function KanbanBoard(): React.JSX.Element {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className={styles.board}>
+      <div
+        ref={boardRef}
+        className={styles.board}
+        onClick={() => { if (!consumeMarqueeClick()) clearSelection() }}
+        onMouseDown={handleMouseDown}
+      >
         {columnOrder.map((status, colIndex) => (
           <KanbanColumn
             key={status}
             status={status}
             tasks={tasksByStatus[status] ?? []}
             onTaskClick={handleTaskClick}
+            onMultiSelect={handleMultiSelect}
             onCreateTask={(title) => handleCreateTask(status, title)}
             selectedTaskId={activeTaskId}
+            multiSelectedIds={selectedTaskIds}
             focusedTaskIndex={focusedTaskIndex}
             isFocusedColumn={focusedColumnIndex === colIndex}
             showCreateInput={createColumnIndex === colIndex}
             onCreateInputShown={() => setCreateColumnIndex(null)}
+            headerAction={
+              status === 'done' && (tasksByStatus['done'] ?? []).length > 0 ? (
+                <button
+                  className={styles.archiveDoneButton}
+                  onClick={handleArchiveDone}
+                  title="Move all done tasks to archive"
+                >
+                  Archive all
+                </button>
+              ) : undefined
+            }
           />
         ))}
       </div>
 
+      {isSelecting && marqueeRect && (
+        <div
+          className={styles.marquee}
+          style={{
+            position: 'fixed',
+            left: marqueeRect.x,
+            top: marqueeRect.y,
+            width: marqueeRect.width,
+            height: marqueeRect.height
+          }}
+        />
+      )}
+
       <DragOverlay dropAnimation={null}>
-        {activeTask ? <TaskCardOverlay task={activeTask} /> : null}
+        {activeTask ? (
+          <TaskCardOverlay
+            task={activeTask}
+            count={selectedTaskIds.has(activeTask.id) ? selectedTaskIds.size : 1}
+          />
+        ) : null}
       </DragOverlay>
     </DndContext>
   )

@@ -44,6 +44,11 @@
   border: 1px solid var(--border);
   background-color: var(--bg-surface);
   color: var(--text-primary);
+  outline: none;
+}
+
+.noteInput:focus {
+  border-color: var(--accent);
 }
 
 .noteInput::placeholder {

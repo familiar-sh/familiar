@@ -7,7 +7,7 @@ describe('createTask', () => {
   it('creates a task with default values', () => {
     const task = createTask('My task')
     expect(task.title).toBe('My task')
-    expect(task.status).toBe('backlog')
+    expect(task.status).toBe('todo')
     expect(task.priority).toBe('none')
     expect(task.labels).toEqual([])
     expect(task.agentStatus).toBe('idle')
@@ -64,7 +64,7 @@ function makeTasks(): Task[] {
     {
       id: 'tsk_3',
       title: 'Write docs',
-      status: 'backlog',
+      status: 'todo',
       priority: 'low',
       labels: ['docs'],
       sortOrder: 3,

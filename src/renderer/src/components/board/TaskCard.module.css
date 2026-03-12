@@ -37,6 +37,12 @@
   box-shadow: var(--shadow-focus);
 }
 
+.cardMultiSelected {
+  border-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
 .cardDragging {
   box-shadow: var(--shadow-lg);
   transform: scale(1.02);
@@ -49,7 +55,72 @@
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-/* ---- Top row: priority + title ---- */
+.cardNotified {
+  border-color: #f2994a;
+  box-shadow: 0 0 0 1px #f2994a;
+}
+
+.cardNotified:hover {
+  border-color: #f2994a;
+  box-shadow: 0 0 0 1px #f2994a, var(--shadow-md);
+}
+
+.notificationDot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background-color: #f2994a;
+  margin-top: 5px;
+  margin-left: auto;
+}
+
+/* ---- Multi-select drag overlay ---- */
+
+.overlayWrapper {
+  position: relative;
+}
+
+.selectionBadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  box-shadow: var(--shadow-md);
+}
+
+.stackedCard {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--accent);
+}
+
+.stackedCard:nth-child(2) {
+  transform: translate(3px, 3px);
+  opacity: 0.7;
+}
+
+.stackedCard:nth-child(3) {
+  transform: translate(6px, 6px);
+  opacity: 0.4;
+}
+
+/* ---- Top row: agent status dot + title ---- */
 
 .topRow {
   display: flex;
@@ -57,12 +128,28 @@
   gap: var(--space-2);
 }
 
-.priorityDot {
+.agentDot {
   flex-shrink: 0;
   width: 8px;
   height: 8px;
   border-radius: var(--radius-full);
   margin-top: 4px;
+}
+
+.agentRunning {
+  animation: agentPulse 2s ease-in-out infinite;
+}
+
+@keyframes agentPulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(94, 106, 210, 0.4);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 4px rgba(94, 106, 210, 0);
+  }
 }
 
 .title {
@@ -100,26 +187,3 @@
   line-height: 1.4;
 }
 
-.agentDot {
-  flex-shrink: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: var(--radius-full);
-  margin-left: auto;
-}
-
-.agentRunning {
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-    box-shadow: 0 0 0 0 currentColor;
-  }
-  50% {
-    opacity: 0.6;
-    box-shadow: 0 0 0 3px transparent;
-  }
-}

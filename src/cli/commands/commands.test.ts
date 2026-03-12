@@ -49,7 +49,7 @@ describe('CLI commands (via file-ops)', () => {
       version: 1,
       projectName: path.basename(tmpDir),
       tasks: [],
-      columnOrder: ['backlog', 'todo', 'in-progress', 'in-review', 'done', 'cancelled'],
+      columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
       labels: []
     }
 
@@ -62,7 +62,7 @@ describe('CLI commands (via file-ops)', () => {
     opts: { priority?: string; status?: string; labels?: string } = {}
   ): Promise<Task> {
     const state = await readProjectState(tmpDir)
-    const status = (opts.status ?? 'backlog') as Task['status']
+    const status = (opts.status ?? 'todo') as Task['status']
     const priority = (opts.priority ?? 'none') as Task['priority']
     const labels = opts.labels ? opts.labels.split(',').map((l) => l.trim()).filter(Boolean) : []
 
@@ -117,7 +117,7 @@ describe('CLI commands (via file-ops)', () => {
       const state = await readProjectState(tmpDir)
       expect(state.version).toBe(1)
       expect(state.tasks).toEqual([])
-      expect(state.columnOrder).toHaveLength(6)
+      expect(state.columnOrder).toHaveLength(5)
     })
   })
 
@@ -127,7 +127,7 @@ describe('CLI commands (via file-ops)', () => {
       const task = await runAdd('My new task')
 
       expect(task.title).toBe('My new task')
-      expect(task.status).toBe('backlog')
+      expect(task.status).toBe('todo')
       expect(task.priority).toBe('none')
 
       const state = await readProjectState(tmpDir)
@@ -171,7 +171,7 @@ describe('CLI commands (via file-ops)', () => {
 
     it('can filter by status', async () => {
       await runInit()
-      await runAdd('Backlog task')
+      await runAdd('Done task', { status: 'done' })
       await runAdd('Todo task', { status: 'todo' })
 
       const state = await readProjectState(tmpDir)
@@ -203,8 +203,8 @@ describe('CLI commands (via file-ops)', () => {
         id: generateActivityId(),
         timestamp: now,
         type: 'status_change',
-        message: 'Status changed from Backlog to In Progress',
-        metadata: { from: 'backlog', to: 'in-progress' }
+        message: 'Status changed from Todo to In Progress',
+        metadata: { from: 'todo', to: 'in-progress' }
       })
 
       const readBack = await readTask(tmpDir, task.id)
@@ -305,15 +305,15 @@ describe('CLI commands (via file-ops)', () => {
           const isChecked = /\[x\]/i.test(trimmed)
           parsed.push({
             title: match[1].trim(),
-            status: isChecked ? 'done' : 'backlog'
+            status: isChecked ? 'done' : 'todo'
           })
         }
       }
 
       expect(parsed).toHaveLength(3)
-      expect(parsed[0]).toEqual({ title: 'First task', status: 'backlog' })
+      expect(parsed[0]).toEqual({ title: 'First task', status: 'todo' })
       expect(parsed[1]).toEqual({ title: 'Completed task', status: 'done' })
-      expect(parsed[2]).toEqual({ title: 'Third task', status: 'backlog' })
+      expect(parsed[2]).toEqual({ title: 'Third task', status: 'todo' })
 
       // Actually create the tasks
       for (const p of parsed) {

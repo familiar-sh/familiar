@@ -22,7 +22,7 @@ describe('DataService', () => {
     return {
       id: 'tsk_ds_test',
       title: 'Test task',
-      status: 'backlog',
+      status: 'todo',
       priority: 'none',
       labels: [],
       agentStatus: 'idle',
@@ -40,7 +40,7 @@ describe('DataService', () => {
       expect(state.projectName).toBe('My Project')
       expect(state.version).toBe(1)
       expect(state.tasks).toEqual([])
-      expect(state.columnOrder).toHaveLength(6)
+      expect(state.columnOrder).toHaveLength(5)
 
       // Verify directories exist
       const dataDir = path.join(tmpDir, '.kanban-agent')

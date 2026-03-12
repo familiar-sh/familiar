@@ -3,10 +3,6 @@ import { useUIStore } from '@renderer/stores/ui-store'
 import type { Priority, AgentStatus } from '@shared/types'
 import styles from './Header.module.css'
 
-interface HeaderProps {
-  projectName: string
-}
-
 const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
   { value: 'urgent', label: 'Urgent' },
   { value: 'high', label: 'High' },
@@ -22,7 +18,7 @@ const AGENT_STATUS_OPTIONS: { value: AgentStatus; label: string }[] = [
   { value: 'error', label: 'Error' }
 ]
 
-export function Header({ projectName }: HeaderProps): React.JSX.Element {
+export function Header(): React.JSX.Element {
   const { filters, setFilter, clearFilters } = useUIStore()
   const [searchInput, setSearchInput] = useState(filters.search)
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
@@ -119,8 +115,6 @@ export function Header({ projectName }: HeaderProps): React.JSX.Element {
 
   return (
     <header className={styles.header}>
-      <span className={styles.projectName}>{projectName}</span>
-
       <div className={styles.searchArea}>
         <input
           className={styles.searchInput}
