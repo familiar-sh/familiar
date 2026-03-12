@@ -12,3 +12,5 @@ build/*
 !build/entitlements.*
 release/
 .superpowers/
+coverage/
+dist-cli/

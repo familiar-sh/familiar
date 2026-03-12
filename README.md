@@ -37,7 +37,7 @@ AI coding agents are powerful, but managing multiple agents across different tas
 
 ## Quick Start
 
-1. Download the latest `.dmg` from [Releases](https://github.com/carlosbaraza/familiar/releases)
+1. Download the latest `.dmg` from [Releases](https://github.com/familiar-sh/familiar/releases)
 2. Open the app
 3. Create tasks, open terminals, and start your agents
 
