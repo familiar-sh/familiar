@@ -25,7 +25,7 @@ export function AgentStatusBadge({
   let effectiveStatus = status
   if (status === 'running' && taskStatus && taskStatus !== 'in-progress') {
     effectiveStatus = 'idle'
-  } else if (status === 'done' && taskStatus && taskStatus !== 'done') {
+  } else if (status === 'done' && taskStatus && taskStatus !== 'done' && taskStatus !== 'in-review') {
     effectiveStatus = 'idle'
   }
   const config = STATUS_CONFIG[effectiveStatus]

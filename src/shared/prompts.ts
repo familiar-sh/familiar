@@ -207,11 +207,18 @@ Use conventional commit prefixes: \`feat:\`, \`fix:\`, \`refactor:\`, \`docs:\`,
 
 ### 6. Signal completion
 
+**Important:** Task status and agent status are independent. Only move the task to \`in-review\` if you are explicitly requesting human review. Setting \`--agent-status done\` does **not** automatically change the task's board column.
+
 \`\`\`bash
-# On success
+# On success — ready for human review
 familiar status $FAMILIAR_TASK_ID in-review
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — all tests passing"
+familiar notify "Task Done" "$FAMILIAR_TASK_ID complete"
+
+# On success — no review needed (e.g. chores, trivial fixes)
+familiar update $FAMILIAR_TASK_ID --agent-status done
+familiar log $FAMILIAR_TASK_ID "Complete — no review needed"
 familiar notify "Task Done" "$FAMILIAR_TASK_ID complete"
 
 # On failure

@@ -30,7 +30,7 @@ function getAgentDotColor(agentStatus: AgentStatus, taskStatus: TaskStatus): str
   if (agentStatus === 'running' && taskStatus !== 'in-progress') {
     return AGENT_STATUS_COLORS.idle
   }
-  if (agentStatus === 'done' && taskStatus !== 'done') {
+  if (agentStatus === 'done' && taskStatus !== 'done' && taskStatus !== 'in-review') {
     return AGENT_STATUS_COLORS.idle
   }
   return AGENT_STATUS_COLORS[agentStatus]

@@ -96,7 +96,7 @@ Use \`familiar status <id> <status>\` to move your task between columns:
 | \`backlog\` | Not yet planned | Rarely used by agents |
 | \`todo\` | Planned but not started | Default for new tasks |
 | \`in-progress\` | **Actively being worked on** | **Set this FIRST when you begin work** |
-| \`in-review\` | Work done, waiting for human review | Set when your work is complete and ready for the user to review |
+| \`in-review\` | Work done, waiting for human review | Only set this if you want the user to review your work — do NOT set automatically on every completion |
 | \`done\` | Completed and accepted | Usually set by the user after reviewing |
 | \`archived\` | No longer relevant | Rarely used by agents |
 
@@ -115,7 +115,8 @@ Use \`familiar update <id> --agent-status <status>\` to show your runtime state:
 
 - **Do NOT** use \`familiar log\` to record status changes — use \`familiar status\` and \`familiar update --agent-status\` instead.
 - **Do** use \`familiar log\` only for progress notes describing what you did or what happened.
-- **Always** set both task status and agent-status together (e.g., \`in-progress\` + \`running\`, \`in-review\` + \`done\`).
+- Task status and agent status are **independent**. Setting \`--agent-status done\` does **not** automatically move the task on the board.
+- Only move the task to \`in-review\` if you are explicitly requesting human review. If the task doesn't need review (e.g. chores, trivial fixes), just set \`--agent-status done\` without changing the task status to \`in-review\`.
 
 ## Task Classification
 
@@ -143,7 +144,7 @@ Do this **right after** setting your status to \`in-progress\`, before you start
 2. **Log progress** at meaningful milestones so the human can follow along
 3. **Read your task document** — it may contain specs, acceptance criteria, or context
 4. **Send notifications** for important events (build failures, completion, blockers)
-5. **Set status to \`in-review\`** and agent-status to \`done\` when finished — let the user move it to \`done\`
+5. **Set agent-status to \`done\`** when finished — only move task status to \`in-review\` if you want the user to review your work
 
 ## Recommended Workflow
 
@@ -162,10 +163,15 @@ familiar log $FAMILIAR_TASK_ID "Implemented the auth module"
 # ... more work ...
 familiar log $FAMILIAR_TASK_ID "Running tests — 12/12 passing"
 
-# 4. On success: update status, then notify
+# 4. On success — ready for human review
 familiar status $FAMILIAR_TASK_ID in-review
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — ready for review"
+familiar notify "Task Complete" "$FAMILIAR_TASK_ID done"
+
+# 4b. On success — no review needed (e.g. chores, trivial fixes)
+familiar update $FAMILIAR_TASK_ID --agent-status done
+familiar log $FAMILIAR_TASK_ID "Complete — no review needed"
 familiar notify "Task Complete" "$FAMILIAR_TASK_ID done"
 
 # 5. On failure: update status, then notify

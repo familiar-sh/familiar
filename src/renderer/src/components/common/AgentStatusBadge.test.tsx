@@ -52,8 +52,13 @@ describe('AgentStatusBadge', () => {
     expect(screen.getByText('Running')).toBeTruthy()
   })
 
-  it('shows done as idle when task is not in done column', () => {
+  it('shows done when task is in-review', () => {
     render(<AgentStatusBadge status="done" taskStatus="in-review" showLabel />)
+    expect(screen.getByText('Done')).toBeTruthy()
+  })
+
+  it('shows done as idle when task is not in done or in-review column', () => {
+    render(<AgentStatusBadge status="done" taskStatus="in-progress" showLabel />)
     expect(screen.getByText('Idle')).toBeTruthy()
   })
 })
