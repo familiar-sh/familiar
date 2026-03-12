@@ -34,8 +34,8 @@
 
   /* ---- Status colors ---- */
   --status-todo: #f0f0f4;
-  --status-in-progress: #f2c94c;
-  --status-in-review: #5e6ad2;
+  --status-in-progress: #5e6ad2;
+  --status-in-review: #e89b3e;
   --status-done: #27ae60;
   --status-archived: #6b7280;
 

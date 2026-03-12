@@ -126,8 +126,8 @@ export function CommandPalette(): React.JSX.Element | null {
 function StatusDot({ status }: { status: TaskStatus }): React.JSX.Element {
   const colorMap: Record<TaskStatus, string> = {
     todo: '#f0f0f4',
-    'in-progress': '#f2c94c',
-    'in-review': '#5e6ad2',
+    'in-progress': '#5e6ad2',
+    'in-review': '#e89b3e',
     done: '#27ae60',
     archived: '#6b7280'
   }
