@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Terminal } from './Terminal'
 import { SnippetSettingsModal } from './SnippetSettingsModal'
+import { LucideIconByName } from './IconPicker'
 import { Tooltip } from '@renderer/components/common'
 import type { Snippet } from '@shared/types'
 import { DEFAULT_SNIPPETS } from '@shared/types/settings'
@@ -252,7 +253,8 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
               style={panelStyles.snippetButton}
               onClick={() => handleSnippet(snippet)}
             >
-              {snippet.title}
+              {snippet.icon && <LucideIconByName name={snippet.icon} size={14} />}
+              {!(snippet.icon && snippet.showIconInTerminal) && snippet.title}
             </button>
           </Tooltip>
         ))}
