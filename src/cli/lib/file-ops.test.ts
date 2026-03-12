@@ -77,12 +77,12 @@ describe('CLI file-ops', () => {
       expect(state.projectName).toBe('test-project')
 
       state.projectName = 'updated'
-      state.labels = ['test']
+      state.labels = [{ name: 'test', color: '#6b7280' }]
       await writeProjectState(tmpDir, state)
 
       const readBack = await readProjectState(tmpDir)
       expect(readBack.projectName).toBe('updated')
-      expect(readBack.labels).toEqual(['test'])
+      expect(readBack.labels).toEqual([{ name: 'test', color: '#6b7280' }])
     })
   })
 

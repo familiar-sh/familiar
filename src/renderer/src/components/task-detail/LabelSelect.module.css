@@ -1,0 +1,180 @@
+/* LabelSelect dropdown */
+.wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  color: var(--text-tertiary);
+  border: 1px dashed var(--border);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.trigger:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-hover);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--z-dropdown);
+  min-width: 220px;
+  padding: var(--space-1);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  outline: none;
+  margin-bottom: var(--space-1);
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+}
+
+.labelList {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.labelRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.option:hover {
+  background-color: var(--accent-subtle);
+  color: var(--text-primary);
+}
+
+.optionActive {
+  color: var(--text-primary);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.labelName {
+  flex: 1;
+}
+
+.check {
+  font-size: var(--font-size-xs);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.colorBtn {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.colorBtn:hover {
+  transform: scale(1.2);
+}
+
+.colorPicker {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 2px);
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  flex-wrap: wrap;
+  width: 130px;
+}
+
+.colorSwatch {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.colorSwatch:hover {
+  transform: scale(1.15);
+}
+
+.colorSwatchActive {
+  border-color: var(--text-primary);
+}
+
+.createOption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+}
+
+.createOption:hover {
+  background-color: var(--accent-subtle);
+  color: var(--text-primary);
+}
+
+.empty {
+  padding: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  text-align: center;
+}

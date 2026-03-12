@@ -60,12 +60,12 @@ describe('DataService', () => {
 
       const state = await service.readProjectState()
       state.projectName = 'Updated Name'
-      state.labels = ['bug', 'feature']
+      state.labels = [{ name: 'bug', color: '#ef4444' }, { name: 'feature', color: '#3b82f6' }]
       await service.writeProjectState(state)
 
       const readBack = await service.readProjectState()
       expect(readBack.projectName).toBe('Updated Name')
-      expect(readBack.labels).toEqual(['bug', 'feature'])
+      expect(readBack.labels).toEqual([{ name: 'bug', color: '#ef4444' }, { name: 'feature', color: '#3b82f6' }])
     })
   })
 

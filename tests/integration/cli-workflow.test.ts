@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
-import { DATA_DIR, STATE_FILE, TASKS_DIR } from '../../src/shared/constants'
+import { DATA_DIR, STATE_FILE, TASKS_DIR, DEFAULT_LABEL_COLOR } from '../../src/shared/constants'
 import type { ProjectState, Task } from '../../src/shared/types'
 import {
   readProjectState,
@@ -80,8 +80,8 @@ describe('CLI workflow integration test', () => {
     state.tasks.push(task)
     if (opts.labels) {
       for (const label of opts.labels) {
-        if (!state.labels.includes(label)) {
-          state.labels.push(label)
+        if (!state.labels.some((l) => l.name === label)) {
+          state.labels.push({ name: label, color: DEFAULT_LABEL_COLOR })
         }
       }
     }
@@ -111,8 +111,8 @@ describe('CLI workflow integration test', () => {
     expect(titles).toContain('Fix CSS bug')
     expect(titles).toContain('Write tests')
     expect(titles).toContain('Deploy to staging')
-    expect(state.labels).toContain('feature')
-    expect(state.labels).toContain('bug')
+    expect(state.labels.some((l) => l.name === 'feature')).toBe(true)
+    expect(state.labels.some((l) => l.name === 'bug')).toBe(true)
 
     // 4. Update status of tasks
     // Move task1 to in-progress

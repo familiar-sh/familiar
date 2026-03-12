@@ -64,7 +64,7 @@ function resetStores(): void {
       }
     ],
     columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
-    labels: ['bug', 'testing']
+    labels: [{ name: 'bug', color: '#ef4444' }, { name: 'testing', color: '#6b7280' }]
   }
 
   useTaskStore.setState({

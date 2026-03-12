@@ -1,9 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Task, TaskStatus, Priority } from '@shared/types'
+import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { Tooltip } from '@renderer/components/common'
+import { useTaskStore } from '@renderer/stores/task-store'
 import { StatusSelect } from './StatusSelect'
 import { PrioritySelect } from './PrioritySelect'
+import { LabelSelect } from './LabelSelect'
 import styles from './TaskDetailHeader.module.css'
 
 interface TaskDetailHeaderProps {
@@ -15,10 +18,9 @@ interface TaskDetailHeaderProps {
 export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderProps): React.JSX.Element {
   const [_editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(task.title)
-  const [addingLabel, setAddingLabel] = useState(false)
-  const [newLabel, setNewLabel] = useState('')
   const titleRef = useRef<HTMLTextAreaElement>(null)
-  const labelInputRef = useRef<HTMLInputElement>(null)
+
+  const projectLabels = useTaskStore((s) => s.projectState?.labels ?? [])
 
   const resizeTitleTextarea = useCallback(() => {
     const el = titleRef.current
@@ -69,33 +71,23 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
     [onUpdate]
   )
 
-  const handleRemoveLabel = useCallback(
+  const handleToggleLabel = useCallback(
     (label: string) => {
-      onUpdate({ labels: task.labels.filter((l) => l !== label) })
+      if (task.labels.includes(label)) {
+        onUpdate({ labels: task.labels.filter((l) => l !== label) })
+      } else {
+        onUpdate({ labels: [...task.labels, label] })
+      }
     },
     [onUpdate, task.labels]
   )
 
-  const handleAddLabel = useCallback(() => {
-    const trimmed = newLabel.trim()
-    if (trimmed && !task.labels.includes(trimmed)) {
-      onUpdate({ labels: [...task.labels, trimmed] })
-    }
-    setNewLabel('')
-    setAddingLabel(false)
-  }, [newLabel, task.labels, onUpdate])
-
-  const handleAddLabelKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        handleAddLabel()
-      } else if (e.key === 'Escape') {
-        setNewLabel('')
-        setAddingLabel(false)
-      }
+  const getLabelColor = useCallback(
+    (name: string): string => {
+      const config = projectLabels.find((l) => l.name === name)
+      return config?.color ?? DEFAULT_LABEL_COLOR
     },
-    [handleAddLabel]
+    [projectLabels]
   )
 
   return (
@@ -145,33 +137,26 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
           <span className={styles.metaLabel}>Labels</span>
           <div className={styles.labelsSection}>
             {task.labels.map((label) => (
-              <span key={label} className={styles.label}>
+              <span
+                key={label}
+                className={styles.label}
+                style={{
+                  backgroundColor: `${getLabelColor(label)}20`,
+                  borderColor: `${getLabelColor(label)}40`,
+                  color: getLabelColor(label)
+                }}
+              >
                 {label}
-                <button className={styles.labelRemove} onClick={() => handleRemoveLabel(label)}>
+                <button
+                  className={styles.labelRemove}
+                  onClick={() => handleToggleLabel(label)}
+                  style={{ color: getLabelColor(label) }}
+                >
                   &#x2715;
                 </button>
               </span>
             ))}
-            {addingLabel ? (
-              <input
-                ref={labelInputRef}
-                className={styles.addLabelInput}
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                onBlur={handleAddLabel}
-                onKeyDown={handleAddLabelKeyDown}
-                autoFocus
-                placeholder="Label name"
-              />
-            ) : (
-              <button
-                className={styles.addLabelButton}
-                onClick={() => setAddingLabel(true)}
-                title="Add label"
-              >
-                +
-              </button>
-            )}
+            <LabelSelect taskLabels={task.labels} onToggle={handleToggleLabel} />
           </div>
         </div>
       </div>

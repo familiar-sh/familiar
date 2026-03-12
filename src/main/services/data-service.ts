@@ -11,7 +11,9 @@ import {
   ATTACHMENTS_DIR,
   SETTINGS_FILE,
   NOTIFICATIONS_FILE,
-  DEFAULT_COLUMNS
+  DEFAULT_COLUMNS,
+  DEFAULT_LABELS,
+  DEFAULT_LABEL_COLOR
 } from '../../shared/constants'
 import path from 'path'
 import { AGENTS_MD } from '../../shared/agent-instructions'
@@ -57,6 +59,17 @@ export class DataService {
         migrated = true
       }
     }
+
+    // Migrate: labels from string[] to LabelConfig[]
+    if (state.labels.length > 0 && typeof state.labels[0] === 'string') {
+      const oldLabels = state.labels as unknown as string[]
+      state.labels = oldLabels.map((name) => {
+        const defaultLabel = DEFAULT_LABELS.find((d) => d.name === name)
+        return { name, color: defaultLabel?.color ?? DEFAULT_LABEL_COLOR }
+      })
+      migrated = true
+    }
+
     if (migrated) {
       await this.writeProjectState(state)
     }
@@ -176,7 +189,7 @@ export class DataService {
       projectName,
       tasks: [],
       columnOrder: [...DEFAULT_COLUMNS],
-      labels: []
+      labels: [...DEFAULT_LABELS]
     }
 
     await this.writeProjectState(state)

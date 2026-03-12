@@ -1,5 +1,6 @@
 import { Command } from 'commander'
 import chalk from 'chalk'
+import { DEFAULT_LABEL_COLOR } from '../../shared/constants'
 import type { Priority, AgentStatus } from '../../shared/types'
 import { isValidPriority } from '../../shared/utils/validators'
 import { generateActivityId } from '../../shared/utils/id-generator'
@@ -74,10 +75,10 @@ export function updateCommand(): Command {
         state.tasks[taskIndex].labels = labels
         changes.push(`labels -> [${labels.join(', ')}]`)
 
-        // Add new labels to project
+        // Add new labels to project label configs
         for (const label of labels) {
-          if (!state.labels.includes(label)) {
-            state.labels.push(label)
+          if (!state.labels.some((l) => l.name === label)) {
+            state.labels.push({ name: label, color: DEFAULT_LABEL_COLOR })
           }
         }
       }

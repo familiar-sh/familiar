@@ -126,34 +126,6 @@
   background-color: var(--bg-surface);
 }
 
-.addLabelButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-full);
-  font-size: 14px;
-  color: var(--text-tertiary);
-  border: 1px dashed var(--border);
-  cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
-}
-
-.addLabelButton:hover {
-  color: var(--text-secondary);
-  border-color: var(--border-hover);
-}
-
-.addLabelInput {
-  font-size: var(--font-size-xs);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--accent);
-  background-color: var(--bg-surface);
-  width: 100px;
-}
-
 .timestamps {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);

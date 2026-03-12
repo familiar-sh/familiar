@@ -183,7 +183,6 @@ After reading the task, add the appropriate label based on the title and descrip
 |-------|-------------|
 | \`bug\` | Fixing broken behavior, errors, crashes, or regressions |
 | \`feature\` | Adding new functionality that didn't exist before |
-| \`improvement\` | Enhancing existing functionality, UX, performance, or DX |
 | \`chore\` | Maintenance, refactoring, dependency updates, CI/CD, docs |
 
 \`\`\`bash

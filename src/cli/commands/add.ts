@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import chalk from 'chalk'
-import { DOCUMENT_FILE } from '../../shared/constants'
+import { DOCUMENT_FILE, DEFAULT_LABEL_COLOR } from '../../shared/constants'
 import type { TaskStatus, Priority } from '../../shared/types'
 import { createTask } from '../../shared/utils/task-utils'
 import { generateActivityId } from '../../shared/utils/id-generator'
@@ -80,10 +80,10 @@ export function addCommand(): Command {
 
       // Update state
       state.tasks.push(task)
-      // Add any new labels
+      // Add any new labels to project label configs
       for (const label of labels) {
-        if (!state.labels.includes(label)) {
-          state.labels.push(label)
+        if (!state.labels.some((l) => l.name === label)) {
+          state.labels.push({ name: label, color: DEFAULT_LABEL_COLOR })
         }
       }
       await writeProjectState(root, state)

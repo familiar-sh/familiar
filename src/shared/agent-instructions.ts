@@ -125,7 +125,6 @@ When you start working on a task, **classify it** by adding the appropriate labe
 |-------|-------------|
 | \`bug\` | Fixing broken behavior, errors, crashes, or regressions |
 | \`feature\` | Adding new functionality that didn't exist before |
-| \`improvement\` | Enhancing existing functionality, UX, performance, or DX |
 | \`chore\` | Maintenance, refactoring, dependency updates, CI/CD, docs |
 
 \`\`\`bash

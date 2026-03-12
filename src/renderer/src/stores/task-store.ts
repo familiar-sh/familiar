@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ProjectState, Task, TaskStatus } from '@shared/types'
+import type { ProjectState, Task, TaskStatus, LabelConfig } from '@shared/types'
 
 interface TaskStore {
   // State
@@ -22,6 +22,9 @@ interface TaskStore {
   // Bulk actions
   moveTasks: (taskIds: string[], newStatus: TaskStatus, startIndex: number) => Promise<void>
   archiveAllDone: () => Promise<void>
+
+  // Labels
+  updateProjectLabels: (labels: LabelConfig[]) => Promise<void>
 
   // Helpers
   getTasksByStatus: (status: TaskStatus) => Task[]
@@ -406,6 +409,15 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         await window.api.updateTask(task)
       }
     }
+    await window.api.writeProjectState(newState)
+    set({ projectState: newState })
+  },
+
+  // Labels
+  updateProjectLabels: async (labels: LabelConfig[]): Promise<void> => {
+    const { projectState } = get()
+    if (!projectState) return
+    const newState: ProjectState = { ...projectState, labels }
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
   },

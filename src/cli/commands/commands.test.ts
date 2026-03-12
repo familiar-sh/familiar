@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
-import { DATA_DIR, STATE_FILE, TASKS_DIR, DEFAULT_LABELS } from '../../shared/constants'
+import { DATA_DIR, STATE_FILE, TASKS_DIR, DEFAULT_LABELS, DEFAULT_LABEL_COLOR } from '../../shared/constants'
 import type { ProjectState, Task } from '../../shared/types'
 
 // We test CLI commands by invoking their action handlers indirectly.
@@ -93,8 +93,8 @@ describe('CLI commands (via file-ops)', () => {
 
     state.tasks.push(task)
     for (const label of labels) {
-      if (!state.labels.includes(label)) {
-        state.labels.push(label)
+      if (!state.labels.some((l) => l.name === label)) {
+        state.labels.push({ name: label, color: DEFAULT_LABEL_COLOR })
       }
     }
     await writeProjectState(tmpDir, state)
@@ -148,8 +148,8 @@ describe('CLI commands (via file-ops)', () => {
       await runAdd('Labeled task', { labels: 'bug,frontend' })
 
       const state = await readProjectState(tmpDir)
-      expect(state.labels).toContain('bug')
-      expect(state.labels).toContain('frontend')
+      expect(state.labels.some((l) => l.name === 'bug')).toBe(true)
+      expect(state.labels.some((l) => l.name === 'frontend')).toBe(true)
       expect(state.tasks[0].labels).toEqual(['bug', 'frontend'])
     })
   })
