@@ -138,7 +138,10 @@ test -f .familiar/state.json && echo "OK: state.json exists" || echo "WARN: stat
 
 ### 5. AI agent hooks
 
-Ask the user which AI agent they are using (e.g. Claude Code, Gemini CLI, Codex, Aider, etc.), then check if the appropriate hooks are configured. Hooks automatically set the agent status to "running" when the user sends a message and "idle" when the agent finishes responding.
+Ask the user which AI agent they are using (e.g. Claude Code, Gemini CLI, Codex, Aider, etc.), then check if the appropriate hooks are configured. Hooks handle two lifecycle events:
+
+- **On user message** (\`on-prompt-submit.sh\`): Sets **task status** to \`in-progress\` and **agent status** to \`running\`.
+- **On agent stop** (\`on-stop.sh\`): Sets **agent status** to \`idle\` and sends a notification. Does NOT change task status.
 
 #### Claude Code hooks
 
@@ -210,8 +213,8 @@ exit 0
 #### Other agents
 
 For other AI agents, check their documentation for lifecycle hooks or event callbacks. The key integration points are:
-- **On user message**: run \`familiar update $FAMILIAR_TASK_ID --agent-status running\`
-- **On agent stop**: run \`familiar update $FAMILIAR_TASK_ID --agent-status idle\`
+- **On user message**: run \`familiar status $FAMILIAR_TASK_ID in-progress\` and \`familiar update $FAMILIAR_TASK_ID --agent-status running\`
+- **On agent stop**: run \`familiar update $FAMILIAR_TASK_ID --agent-status idle\` (do NOT change task status)
 
 ## Report format
 
