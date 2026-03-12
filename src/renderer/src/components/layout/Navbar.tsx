@@ -4,6 +4,7 @@ import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { APP_NAME } from '@shared/constants'
+import { AgentSwapWidget } from './AgentSwapWidget'
 import styles from './Navbar.module.css'
 
 export function Navbar(): React.JSX.Element {
@@ -101,6 +102,9 @@ export function Navbar(): React.JSX.Element {
       </div>
 
       <div className={styles.navGroupRight}>
+        {/* Agent quick-swap dots */}
+        <AgentSwapWidget />
+
         {/* Notification bell */}
         <div className={styles.dropdownAnchor} ref={dropdownRef}>
           <button
