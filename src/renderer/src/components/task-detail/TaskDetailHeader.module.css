@@ -13,6 +13,12 @@
   justify-content: space-between;
 }
 
+.topBarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .closeButton {
   display: flex;
   align-items: center;

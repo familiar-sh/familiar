@@ -97,11 +97,34 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
           <span>Created {formatRelativeTime(task.createdAt)}</span>
           <span>Updated {formatRelativeTime(task.updatedAt)}</span>
         </div>
-        <Tooltip placement="bottom" content="Back to dashboard (Esc)">
-          <button className={styles.closeButton} onClick={onClose}>
-            &#x2715;
-          </button>
-        </Tooltip>
+        <div className={styles.topBarActions}>
+          <Tooltip placement="bottom" content="Open task folder in Finder">
+            <button
+              className={styles.closeButton}
+              onClick={() => {
+                window.api
+                  .getProjectRoot()
+                  .then((root) =>
+                    window.api.openPath(`${root}/.kanban-agent/tasks/${task.id}`)
+                  )
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M2 3.5C2 2.67 2.67 2 3.5 2H6l1.5 1.5H12.5C13.33 3.5 14 4.17 14 5v7.5c0 .83-.67 1.5-1.5 1.5h-9C2.67 14 2 13.33 2 12.5v-9z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </Tooltip>
+          <Tooltip placement="bottom" content="Back to dashboard (Esc)">
+            <button className={styles.closeButton} onClick={onClose}>
+              &#x2715;
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       <div className={styles.titleRow}>
