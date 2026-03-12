@@ -117,12 +117,16 @@ export function KanbanColumn({
   }, [newTaskTitle])
 
   const columnContextItems: ContextMenuItem[] = [
-    {
-      label: 'Create task',
-      onClick: () => setIsCreating(true),
-      shortcut: 'C'
-    },
-    { label: '', onClick: () => {}, divider: true },
+    ...(status !== 'archived'
+      ? [
+          {
+            label: 'Create task',
+            onClick: () => setIsCreating(true),
+            shortcut: 'C'
+          },
+          { label: '', onClick: () => {}, divider: true } as ContextMenuItem
+        ]
+      : []),
     {
       label: `Clear column (${tasks.length})`,
       onClick: () => {},
@@ -197,14 +201,16 @@ export function KanbanColumn({
         <span className={styles.statusName}>{COLUMN_LABELS[status]}</span>
         <span className={styles.taskCount}>{tasks.length}</span>
         {headerAction}
-        <button
-          className={styles.addButton}
-          onClick={handlePlusClick}
-          title="Create task (c)"
-          aria-label={`Create task in ${COLUMN_LABELS[status]}`}
-        >
-          +
-        </button>
+        {status !== 'archived' && (
+          <button
+            className={styles.addButton}
+            onClick={handlePlusClick}
+            title="Create task (c)"
+            aria-label={`Create task in ${COLUMN_LABELS[status]}`}
+          >
+            +
+          </button>
+        )}
       </div>
 
       {isCreating && (
