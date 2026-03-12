@@ -197,6 +197,9 @@
   outline: none;
   font-family: inherit;
   width: 100%;
+  resize: none;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 /* ---- Description preview + expanded editor ---- */

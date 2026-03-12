@@ -82,7 +82,7 @@ export function TaskCard({
   // Inline title editing
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitleValue, setEditTitleValue] = useState(task.title)
-  const titleInputRef = useRef<HTMLInputElement>(null)
+  const titleInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Description preview + expand
   const [documentContent, setDocumentContent] = useState<string | null>(null)
@@ -99,13 +99,23 @@ export function TaskCard({
     return () => { cancelled = true }
   }, [task.id])
 
+  // Auto-resize textarea to fit content
+  const resizeTitleTextarea = useCallback(() => {
+    const el = titleInputRef.current
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight}px`
+    }
+  }, [])
+
   // Focus title input when editing starts
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus()
       titleInputRef.current.select()
+      resizeTitleTextarea()
     }
-  }, [isEditingTitle])
+  }, [isEditingTitle, resizeTitleTextarea])
 
   const handleTitleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -123,7 +133,8 @@ export function TaskCard({
 
   const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
     e.stopPropagation()
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
       handleTitleSave()
     } else if (e.key === 'Escape') {
       setIsEditingTitle(false)
@@ -363,14 +374,18 @@ export function TaskCard({
             )}
           </button>
           {isEditingTitle ? (
-            <input
+            <textarea
               ref={titleInputRef}
               className={styles.titleInput}
               value={editTitleValue}
-              onChange={(e) => setEditTitleValue(e.target.value)}
+              onChange={(e) => {
+                setEditTitleValue(e.target.value)
+                resizeTitleTextarea()
+              }}
               onBlur={handleTitleSave}
               onKeyDown={handleTitleKeyDown}
               onClick={(e) => e.stopPropagation()}
+              rows={1}
             />
           ) : (
             <span className={styles.title} onClick={handleTitleClick}>{task.title}</span>
