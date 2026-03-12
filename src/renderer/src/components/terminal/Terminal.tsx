@@ -94,30 +94,6 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
       window.api.ptyResize(sessionId, cols, rows)
     })
 
-    // Intercept paste: if clipboard contains files, paste their paths instead of content.
-    // Electron extends File objects with a `path` property — Claude Code and other CLI
-    // tools need the file path (e.g. for images) rather than raw binary data.
-    const handlePaste = (e: ClipboardEvent): void => {
-      const files = e.clipboardData?.files
-      if (files && files.length > 0) {
-        e.preventDefault()
-        e.stopPropagation()
-        const paths: string[] = []
-        for (let i = 0; i < files.length; i++) {
-          // Electron's File objects have a `path` property with the absolute filesystem path
-          const filePath = (files[i] as File & { path?: string }).path
-          if (filePath) {
-            paths.push(filePath)
-          }
-        }
-        if (paths.length > 0) {
-          const pasteText = paths.join(' ')
-          window.api.ptyWrite(sessionId, pasteText)
-        }
-      }
-    }
-    containerRef.current.addEventListener('paste', handlePaste)
-
     // ResizeObserver for container resize (debounced)
     let resizeTimer: ReturnType<typeof setTimeout>
     const resizeObserver = new ResizeObserver(() => {
@@ -133,7 +109,6 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
     return (): void => {
       clearTimeout(resizeTimer)
       resizeObserver.disconnect()
-      containerRef.current?.removeEventListener('paste', handlePaste)
       cleanup()
       term.dispose()
     }
