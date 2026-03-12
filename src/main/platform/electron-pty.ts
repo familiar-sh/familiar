@@ -223,7 +223,7 @@ export class ElectronPtyManager implements IPtyManager {
     const validCwd = getValidCwd(cwd)
     const env = getShellEnv()
 
-    // Inject kanban context so agents know which task they're in
+    // Inject familiar context so agents know which task they're in
     env.FAMILIAR_TASK_ID = taskId
     env.FAMILIAR_PROJECT_ROOT = cwd
 
@@ -238,14 +238,14 @@ export class ElectronPtyManager implements IPtyManager {
       tmuxSessionName = `familiar-${taskId}`
 
       // Ensure tmux session exists — create if needed, ignore "duplicate session" errors
-      const kanbanEnv = {
+      const familiarEnv = {
         FAMILIAR_TASK_ID: taskId,
         FAMILIAR_PROJECT_ROOT: cwd
       }
       try {
         const exists = await this._tmux.hasSession(tmuxSessionName)
         if (!exists) {
-          await this._tmux.createSession(tmuxSessionName, validCwd, kanbanEnv)
+          await this._tmux.createSession(tmuxSessionName, validCwd, familiarEnv)
           isNewSession = true
         }
       } catch (err) {

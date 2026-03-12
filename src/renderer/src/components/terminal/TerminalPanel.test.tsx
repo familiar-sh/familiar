@@ -201,7 +201,7 @@ describe('TerminalPanel', () => {
   })
 
   it('handles Stop Agent flow: kills tmux sessions, destroys PTY, shows stopped state', async () => {
-    mockApi.tmuxList.mockResolvedValue(['familiar-tsk_test01-0', 'kanban-other-0'])
+    mockApi.tmuxList.mockResolvedValue(['familiar-tsk_test01-0', 'other-session-0'])
 
     await renderActive()
 
@@ -212,7 +212,7 @@ describe('TerminalPanel', () => {
 
     // Should kill only matching tmux sessions
     expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_test01-0')
-    expect(mockApi.tmuxKill).not.toHaveBeenCalledWith('kanban-other-0')
+    expect(mockApi.tmuxKill).not.toHaveBeenCalledWith('other-session-0')
 
     // Should destroy PTY
     expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
