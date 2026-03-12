@@ -428,6 +428,7 @@ export function KanbanBoard(): React.JSX.Element {
               }
               focusedTaskIndex={focusedTaskIndex}
               isFocusedColumn={focusedColumnIndex === colIndex}
+              alwaysShowInput={status === 'todo'}
               showCreateInput={createColumnIndex === colIndex}
               onCreateInputShown={() => setCreateColumnIndex(null)}
               headerAction={

@@ -26,6 +26,7 @@ interface KanbanColumnProps {
   onCreateInputShown?: () => void
   headerAction?: React.ReactNode
   dashboardSnippets?: Snippet[]
+  alwaysShowInput?: boolean
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
@@ -51,7 +52,8 @@ export function KanbanColumn({
   showCreateInput = false,
   onCreateInputShown,
   headerAction,
-  dashboardSnippets = []
+  dashboardSnippets = [],
+  alwaysShowInput = false
 }: KanbanColumnProps): React.JSX.Element {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [isCreating, setIsCreating] = useState(false)
@@ -79,6 +81,16 @@ export function KanbanColumn({
       inputRef.current.focus()
     }
   }, [isCreating])
+
+  // Listen for focus-new-task-input event (triggered by Cmd+N)
+  useEffect(() => {
+    if (!alwaysShowInput) return
+    const handleFocus = (): void => {
+      inputRef.current?.focus()
+    }
+    window.addEventListener('focus-new-task-input', handleFocus)
+    return () => window.removeEventListener('focus-new-task-input', handleFocus)
+  }, [alwaysShowInput])
 
   const handlePlusClick = useCallback(() => {
     setIsCreating(true)
@@ -110,7 +122,9 @@ export function KanbanColumn({
       }
       if (e.key === 'Escape') {
         setNewTaskTitle('')
-        setIsCreating(false)
+        if (!alwaysShowInput) {
+          setIsCreating(false)
+        }
         ;(e.target as HTMLTextAreaElement).blur()
       }
     },
@@ -118,10 +132,10 @@ export function KanbanColumn({
   )
 
   const handleBlur = useCallback(() => {
-    if (!newTaskTitle.trim()) {
+    if (!alwaysShowInput && !newTaskTitle.trim()) {
       setIsCreating(false)
     }
-  }, [newTaskTitle])
+  }, [newTaskTitle, alwaysShowInput])
 
   const columnContextItems: ContextMenuItem[] = [
     ...(status !== 'archived'
@@ -221,7 +235,7 @@ export function KanbanColumn({
         )}
       </div>
 
-      {isCreating && (
+      {(alwaysShowInput || isCreating) && (
         <div className={styles.createArea}>
           <textarea
             ref={inputRef}

@@ -41,11 +41,19 @@ export function useGlobalShortcuts(): void {
         return
       }
 
-      // Cmd+N — create new task
+      // Cmd+N — focus the new task input in the todo column
       if (meta && e.key === 'n') {
         e.preventDefault()
         if (projectState) {
-          addTask('New task')
+          // Close any open views to return to the board
+          if (settingsOpen) closeSettings()
+          if (taskDetailOpen) closeTaskDetail()
+          if (commandPaletteOpen) toggleCommandPalette()
+          // Focus the always-visible input in the todo column
+          // Use setTimeout to ensure views close before focusing
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('focus-new-task-input'))
+          }, 0)
         }
         return
       }
