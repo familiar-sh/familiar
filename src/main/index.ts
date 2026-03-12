@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, protocol, net } from 'electron'
+import { app, BrowserWindow, shell, protocol, net, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { ElectronTmuxManager } from './platform/electron-tmux'
@@ -11,6 +11,7 @@ import { registerWindowHandlers } from './ipc/window-handlers'
 import { registerCliHandlers } from './ipc/cli-handlers'
 import { DataService } from './services/data-service'
 import { FileWatcher } from './services/file-watcher'
+import { buildAppMenu } from './menu'
 
 const tmuxManager = new ElectronTmuxManager()
 const ptyManager = new ElectronPtyManager(tmuxManager)
@@ -30,8 +31,18 @@ protocol.registerSchemesAsPrivileged([
   }
 ])
 
-// Default project root to the current working directory
-const dataService = new DataService(process.cwd())
+// Parse --project-root from command line arguments
+function getProjectRootFromArgs(): string {
+  const args = process.argv
+  const idx = args.indexOf('--project-root')
+  if (idx !== -1 && args[idx + 1]) {
+    return args[idx + 1]
+  }
+  return process.cwd()
+}
+
+// Default project root to --project-root arg or current working directory
+const dataService = new DataService(getProjectRootFromArgs())
 ptyManager.setDataService(dataService)
 
 function createWindow(): void {
@@ -74,7 +85,7 @@ function createWindow(): void {
   // Register IPC handlers
   registerPtyHandlers(ptyManager, mainWindow)
   registerTmuxHandlers(tmuxManager)
-  registerFileHandlers(dataService)
+  registerFileHandlers(dataService, () => fileWatcher)
   registerNotificationHandlers(dataService)
   registerWindowHandlers(
     mainWindow,
@@ -83,6 +94,10 @@ function createWindow(): void {
     (fw) => { fileWatcher = fw }
   )
   registerCliHandlers()
+
+  // Build and set the application menu
+  const appMenu = buildAppMenu(mainWindow)
+  Menu.setApplicationMenu(appMenu)
 }
 
 app.whenReady().then(() => {
