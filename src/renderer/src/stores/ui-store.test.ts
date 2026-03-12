@@ -18,7 +18,8 @@ describe('useUIStore', () => {
       },
       focusedColumnIndex: 0,
       focusedTaskIndex: 0,
-      editorPanelWidth: 400
+      editorPanelWidth: 400,
+      createTaskModalOpen: false
     })
   })
 
@@ -123,6 +124,18 @@ describe('useUIStore', () => {
     it('accepts valid values within range', () => {
       useUIStore.getState().setEditorPanelWidth(500)
       expect(useUIStore.getState().editorPanelWidth).toBe(500)
+    })
+  })
+
+  describe('createTaskModal', () => {
+    it('opens and closes the create task modal', () => {
+      expect(useUIStore.getState().createTaskModalOpen).toBe(false)
+
+      useUIStore.getState().openCreateTaskModal()
+      expect(useUIStore.getState().createTaskModalOpen).toBe(true)
+
+      useUIStore.getState().closeCreateTaskModal()
+      expect(useUIStore.getState().createTaskModalOpen).toBe(false)
     })
   })
 })

@@ -112,14 +112,35 @@ describe('useGlobalShortcuts', () => {
     window.removeEventListener('focus-new-task-input', handler)
   })
 
-  it('Cmd+N closes settings and task detail first', () => {
-    useUIStore.setState({ settingsOpen: true, taskDetailOpen: true, activeTaskId: 'tsk_1' })
+  it('Cmd+N opens create task modal when task detail is open', () => {
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1' })
     renderHook(() => useGlobalShortcuts())
 
     act(() => fireMetaKey('n'))
 
-    expect(useUIStore.getState().settingsOpen).toBe(false)
-    expect(useUIStore.getState().taskDetailOpen).toBe(false)
+    // Should keep task detail open and show modal instead
+    expect(useUIStore.getState().taskDetailOpen).toBe(true)
+    expect(useUIStore.getState().createTaskModalOpen).toBe(true)
+  })
+
+  it('Cmd+N opens create task modal when settings is open', () => {
+    useUIStore.setState({ settingsOpen: true })
+    renderHook(() => useGlobalShortcuts())
+
+    act(() => fireMetaKey('n'))
+
+    expect(useUIStore.getState().settingsOpen).toBe(true)
+    expect(useUIStore.getState().createTaskModalOpen).toBe(true)
+  })
+
+  it('Cmd+N closes command palette before opening modal', () => {
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1', commandPaletteOpen: true })
+    renderHook(() => useGlobalShortcuts())
+
+    act(() => fireMetaKey('n'))
+
+    expect(useUIStore.getState().commandPaletteOpen).toBe(false)
+    expect(useUIStore.getState().createTaskModalOpen).toBe(true)
   })
 
   it('Cmd+N does nothing when no project state', () => {

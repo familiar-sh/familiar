@@ -24,6 +24,9 @@ interface UIState {
   // Settings page
   settingsOpen: boolean
 
+  // Create task modal (used when creating from task detail view)
+  createTaskModalOpen: boolean
+
   // Board filters
   filters: TaskFilters
 
@@ -43,6 +46,8 @@ interface UIState {
   toggleCommandPalette: () => void
   openSettings: () => void
   closeSettings: () => void
+  openCreateTaskModal: () => void
+  closeCreateTaskModal: () => void
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void
   clearFilters: () => void
   setFocusedColumn: (index: number) => void
@@ -79,6 +84,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Settings page
   settingsOpen: false,
+
+  // Create task modal
+  createTaskModalOpen: false,
 
   // Board filters
   filters: { ...defaultFilters },
@@ -121,6 +129,12 @@ export const useUIStore = create<UIState>((set) => ({
 
   closeSettings: () =>
     set({ settingsOpen: false }),
+
+  openCreateTaskModal: () =>
+    set({ createTaskModalOpen: true }),
+
+  closeCreateTaskModal: () =>
+    set({ createTaskModalOpen: false }),
 
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),

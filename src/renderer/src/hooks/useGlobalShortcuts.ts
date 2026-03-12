@@ -16,6 +16,7 @@ export function useGlobalShortcuts(): void {
   const openSettings = useUIStore((s) => s.openSettings)
   const closeSettings = useUIStore((s) => s.closeSettings)
   const settingsOpen = useUIStore((s) => s.settingsOpen)
+  const openCreateTaskModal = useUIStore((s) => s.openCreateTaskModal)
   const addTask = useTaskStore((s) => s.addTask)
   const projectState = useTaskStore((s) => s.projectState)
 
@@ -41,19 +42,23 @@ export function useGlobalShortcuts(): void {
         return
       }
 
-      // Cmd+N — focus the new task input in the todo column
+      // Cmd+N — create new task
+      // In task detail view: open modal (don't lose context)
+      // In board view: focus the new task input in the todo column
       if (meta && e.key === 'n') {
         e.preventDefault()
         if (projectState) {
-          // Close any open views to return to the board
-          if (settingsOpen) closeSettings()
-          if (taskDetailOpen) closeTaskDetail()
-          if (commandPaletteOpen) toggleCommandPalette()
-          // Focus the always-visible input in the todo column
-          // Use setTimeout to ensure views close before focusing
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('focus-new-task-input'))
-          }, 0)
+          if (taskDetailOpen || settingsOpen) {
+            // Open modal overlay without closing the current view
+            if (commandPaletteOpen) toggleCommandPalette()
+            openCreateTaskModal()
+          } else {
+            // On the board: focus the always-visible input in the todo column
+            if (commandPaletteOpen) toggleCommandPalette()
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('focus-new-task-input'))
+            }, 0)
+          }
         }
         return
       }
@@ -110,6 +115,7 @@ export function useGlobalShortcuts(): void {
     openSettings,
     closeSettings,
     settingsOpen,
+    openCreateTaskModal,
     addTask,
     projectState,
     isInputFocused
