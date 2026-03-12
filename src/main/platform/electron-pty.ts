@@ -123,14 +123,14 @@ function taskIdToUuid(taskId: string): string {
 }
 
 /**
- * Resolve a Claude default command that contains `--resume $FAMILIAR_TASK_ID` (or similar)
+ * Resolve a Claude default command that contains `--resume $SOME_VAR` (or similar)
  * into either `--resume <uuid>` (if a prior session exists) or `--session-id <uuid>`
  * (if starting fresh). This avoids the interactive resume picker showing up when no
  * session matches the task ID.
  */
 function resolveClaudeSessionCommand(command: string, taskId: string, projectRoot: string): string {
-  // Only transform commands that reference FAMILIAR_TASK_ID in a --resume flag
-  const resumePattern = /--resume\s+["']?\$FAMILIAR_TASK_ID["']?/
+  // Match --resume followed by a shell variable (e.g. $FAMILIAR_TASK_ID, $KANBAN_TASK_ID)
+  const resumePattern = /--resume\s+["']?\$\w+["']?/
   if (!resumePattern.test(command)) return command
 
   const sessionUuid = taskIdToUuid(taskId)
