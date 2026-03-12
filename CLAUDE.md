@@ -186,3 +186,14 @@ Key files: `.claude/hooks/on-prompt-submit.sh`, `.claude/hooks/on-stop.sh`, `src
 ### Adding a new store
 1. Create in `src/renderer/src/stores/`
 2. Create colocated test file
+
+### Releasing a new version
+1. Bump `"version"` in `package.json`
+2. Build the app: `npm run build:app` (builds Electron + CLI + DMG)
+3. The DMG is output to `release/Familiar-<version>-arm64.dmg`
+4. Create a GitHub release:
+   ```bash
+   gh release create v<version> "release/Familiar-<version>-arm64.dmg" \
+     --title "Familiar v<version>" --notes "<release notes>"
+   ```
+5. To delete old releases: `gh release delete v<old> --yes --cleanup-tag`
