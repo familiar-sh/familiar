@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -15,7 +15,7 @@ import type {
   DragOverEvent,
   CollisionDetection
 } from '@dnd-kit/core'
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable'
 import type { Task, TaskStatus } from '@shared/types'
 import { DEFAULT_COLUMNS } from '@shared/constants'
 import { filterTasks } from '@shared/utils/task-utils'
@@ -30,7 +30,7 @@ import { TaskCardOverlay } from './TaskCard'
 import styles from './KanbanBoard.module.css'
 
 export function KanbanBoard(): React.JSX.Element {
-  const { projectState, isLoading, addTask, moveTask, moveTasks, archiveAllDone } =
+  const { projectState, isLoading, addTask, moveTask, reorderTask, moveTasks, archiveAllDone } =
     useTaskStore()
   const { filters, openTaskDetail, activeTaskId, focusedColumnIndex, focusedTaskIndex } =
     useUIStore()
@@ -45,6 +45,11 @@ export function KanbanBoard(): React.JSX.Element {
 
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [createColumnIndex, setCreateColumnIndex] = useState<number | null>(null)
+
+  // Virtual arrangement of task IDs per column during drag.
+  // This allows cross-column drag to show a gap in the target column.
+  const [dragArrangement, setDragArrangement] = useState<Record<string, string[]> | null>(null)
+  const dragActiveIdRef = useRef<string | null>(null)
 
   const columnOrder = projectState?.columnOrder ?? DEFAULT_COLUMNS
 
@@ -109,6 +114,22 @@ export function KanbanBoard(): React.JSX.Element {
     return map
   }, [filteredTasks, columnOrder])
 
+  // During drag, compute task lists from the virtual arrangement so that
+  // the SortableContext in each column has the dragged item at the right spot.
+  const arrangedTasksByStatus = useMemo(() => {
+    if (!dragArrangement) return tasksByStatus
+    const taskMap = new Map<string, Task>()
+    for (const tasks of Object.values(tasksByStatus)) {
+      for (const t of tasks) taskMap.set(t.id, t)
+    }
+    const result: Record<string, Task[]> = {}
+    for (const status of columnOrder) {
+      const ids = dragArrangement[status] ?? []
+      result[status] = ids.map((id) => taskMap.get(id)).filter((t): t is Task => t !== undefined)
+    }
+    return result
+  }, [dragArrangement, tasksByStatus, columnOrder])
+
   // Keyboard navigation
   const handleKeyboardCreate = useCallback((colIndex: number) => {
     setCreateColumnIndex(colIndex)
@@ -163,9 +184,17 @@ export function KanbanBoard(): React.JSX.Element {
     [addTask]
   )
 
-  // Find which column a task belongs to
+  // Find which column a task belongs to (uses arrangement during drag)
   const findTaskColumn = useCallback(
     (taskId: string): TaskStatus | null => {
+      // During drag, check the virtual arrangement first
+      if (dragArrangement) {
+        for (const status of columnOrder) {
+          if (dragArrangement[status]?.includes(taskId)) {
+            return status as TaskStatus
+          }
+        }
+      }
       for (const status of columnOrder) {
         const tasks = tasksByStatus[status] ?? []
         if (tasks.some((t) => t.id === taskId)) {
@@ -174,7 +203,7 @@ export function KanbanBoard(): React.JSX.Element {
       }
       return null
     },
-    [columnOrder, tasksByStatus]
+    [columnOrder, tasksByStatus, dragArrangement]
   )
 
   // Find a task by ID across all columns
@@ -193,69 +222,137 @@ export function KanbanBoard(): React.JSX.Element {
       if (task) {
         setActiveTask(task)
         setDraggedTask(task.id)
+        dragActiveIdRef.current = task.id
         // If dragging a task not in the selection, clear selection and select only this task
         if (!selectedTaskIds.has(task.id)) {
           clearSelection()
         }
+        // Initialize the virtual arrangement from current task order
+        const arrangement: Record<string, string[]> = {}
+        for (const status of columnOrder) {
+          arrangement[status] = (tasksByStatus[status] ?? []).map((t) => t.id)
+        }
+        setDragArrangement(arrangement)
       }
     },
-    [findTask, setDraggedTask, selectedTaskIds, clearSelection]
+    [findTask, setDraggedTask, selectedTaskIds, clearSelection, columnOrder, tasksByStatus]
   )
 
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
-      const { over } = event
+      const { active, over } = event
       if (!over) {
         setDragOverColumn(null)
         return
       }
 
-      // Determine which column we're over
+      const activeId = active.id as string
       const overId = over.id as string
+
+      // Determine target column
+      let targetStatus: TaskStatus
+
       if (overId.startsWith('column-')) {
-        const status = overId.replace('column-', '') as TaskStatus
-        setDragOverColumn(status)
+        targetStatus = overId.replace('column-', '') as TaskStatus
       } else {
-        // Over a task — find its column
+        // Over a task — find its column from the arrangement
         const col = findTaskColumn(overId)
-        if (col) {
-          setDragOverColumn(col)
-        }
+        if (!col) return
+        targetStatus = col
       }
+
+      setDragOverColumn(targetStatus)
+
+      // Update the virtual arrangement to move the active item into the target column
+      setDragArrangement((prev) => {
+        if (!prev) return prev
+
+        // Find which column currently holds the active item in the arrangement
+        let sourceStatus: string | null = null
+        for (const status of columnOrder) {
+          if (prev[status]?.includes(activeId)) {
+            sourceStatus = status
+            break
+          }
+        }
+        if (!sourceStatus) return prev
+
+        // Find the over index within the arrangement
+        if (overId.startsWith('column-')) {
+          // Hovering on empty column area — place at end
+          if (sourceStatus === targetStatus) {
+            // Same column, move to end
+            const ids = prev[sourceStatus].filter((id) => id !== activeId)
+            ids.push(activeId)
+            return { ...prev, [sourceStatus]: ids }
+          }
+          // Cross-column: remove from source, append to target
+          const sourceIds = prev[sourceStatus].filter((id) => id !== activeId)
+          const targetIds = [...(prev[targetStatus] ?? []), activeId]
+          return { ...prev, [sourceStatus]: sourceIds, [targetStatus]: targetIds }
+        }
+
+        // Hovering over a specific task
+        const targetIds = prev[targetStatus] ?? []
+        const overIdx = targetIds.indexOf(overId)
+        if (overIdx === -1) return prev
+
+        if (sourceStatus === targetStatus) {
+          // Same column reorder
+          const activeIdx = targetIds.indexOf(activeId)
+          if (activeIdx === -1 || activeIdx === overIdx) return prev
+          return { ...prev, [targetStatus]: arrayMove(targetIds, activeIdx, overIdx) }
+        }
+
+        // Cross-column: remove from source, insert at target position
+        const sourceIds = prev[sourceStatus].filter((id) => id !== activeId)
+        const newTargetIds = targetIds.filter((id) => id !== activeId)
+        newTargetIds.splice(overIdx, 0, activeId)
+        return { ...prev, [sourceStatus]: sourceIds, [targetStatus]: newTargetIds }
+      })
     },
-    [findTaskColumn, setDragOverColumn]
+    [findTaskColumn, setDragOverColumn, columnOrder]
   )
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
+      const arrangement = dragArrangement
       setActiveTask(null)
       setDraggedTask(null)
       setDragOverColumn(null)
+      setDragArrangement(null)
+      dragActiveIdRef.current = null
 
-      if (!over) return
+      if (!over || !arrangement) return
 
       const activeId = active.id as string
-      const overId = over.id as string
 
-      // Dropped on itself — no-op (single card only)
-      if (activeId === overId && selectedTaskIds.size <= 1) return
-
-      // Determine target column
-      let targetStatus: TaskStatus
-      let targetIndex: number
-
-      if (overId.startsWith('column-')) {
-        targetStatus = overId.replace('column-', '') as TaskStatus
-        targetIndex = (tasksByStatus[targetStatus] ?? []).length
-      } else {
-        const col = findTaskColumn(overId)
-        if (!col) return
-        targetStatus = col
-        const targetTasks = tasksByStatus[col] ?? []
-        const overIndex = targetTasks.findIndex((t) => t.id === overId)
-        targetIndex = overIndex >= 0 ? overIndex : targetTasks.length
+      // Find original source column from tasksByStatus (not arrangement)
+      let originalSourceColumn: TaskStatus | null = null
+      for (const status of columnOrder) {
+        if ((tasksByStatus[status] ?? []).some((t) => t.id === activeId)) {
+          originalSourceColumn = status as TaskStatus
+          break
+        }
       }
+      if (!originalSourceColumn) return
+
+      // Find where the active item ended up in the arrangement
+      let targetStatus: TaskStatus | null = null
+      let targetIndex = 0
+      for (const status of columnOrder) {
+        const ids = arrangement[status] ?? []
+        const idx = ids.indexOf(activeId)
+        if (idx !== -1) {
+          targetStatus = status as TaskStatus
+          // The index should exclude the active item itself for the store API
+          targetIndex = ids.slice(0, idx).filter((id) => id !== activeId).length
+          break
+        }
+      }
+
+      if (!targetStatus) return
 
       // Multi-select: move all selected tasks together
       const draggedIds =
@@ -264,27 +361,34 @@ export function KanbanBoard(): React.JSX.Element {
           : [activeId]
 
       if (draggedIds.length > 1) {
-        // Filter out tasks already in the target column
-        const idsToMove = draggedIds.filter((id) => findTaskColumn(id) !== targetStatus)
+        // For multi-select, find original columns from tasksByStatus
+        const idsToMove = draggedIds.filter((id) => {
+          for (const status of columnOrder) {
+            if ((tasksByStatus[status] ?? []).some((t) => t.id === id)) {
+              return status !== targetStatus
+            }
+          }
+          return false
+        })
         if (idsToMove.length > 0) {
           await moveTasks(idsToMove, targetStatus, targetIndex)
         }
         clearSelection()
       } else {
-        const sourceColumn = findTaskColumn(activeId)
-        if (!sourceColumn) return
-
-        if (sourceColumn === targetStatus) {
-          return // No-op: card is already in this column
+        if (originalSourceColumn === targetStatus) {
+          // Same column reorder
+          await reorderTask(activeId, targetIndex)
         } else {
           await moveTask(activeId, targetStatus, targetIndex)
         }
       }
     },
     [
+      dragArrangement,
+      columnOrder,
       tasksByStatus,
-      findTaskColumn,
       moveTask,
+      reorderTask,
       moveTasks,
       setDraggedTask,
       setDragOverColumn,
@@ -292,6 +396,14 @@ export function KanbanBoard(): React.JSX.Element {
       clearSelection
     ]
   )
+
+  const handleDragCancel = useCallback(() => {
+    setActiveTask(null)
+    setDraggedTask(null)
+    setDragOverColumn(null)
+    setDragArrangement(null)
+    dragActiveIdRef.current = null
+  }, [setDraggedTask, setDragOverColumn])
 
   const handleArchiveDone = useCallback(async () => {
     const doneTasks = (tasksByStatus['done'] ?? [])
@@ -341,6 +453,7 @@ export function KanbanBoard(): React.JSX.Element {
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <div
         ref={boardRef}
@@ -352,7 +465,7 @@ export function KanbanBoard(): React.JSX.Element {
           <KanbanColumn
             key={status}
             status={status}
-            tasks={tasksByStatus[status] ?? []}
+            tasks={arrangedTasksByStatus[status] ?? []}
             onTaskClick={handleTaskClick}
             onMultiSelect={handleMultiSelect}
             onCreateTask={(title) => handleCreateTask(status, title)}
