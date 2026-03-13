@@ -401,7 +401,7 @@ describe('CLI commands (via file-ops)', () => {
     it('includes simplifyTaskTitles description when enabled', () => {
       const section = buildSettingsSection({ simplifyTaskTitles: true })
       expect(section).toContain('`simplifyTaskTitles` is ON')
-      expect(section).toContain('Simplify the task title')
+      expect(section).toContain('simplify the task title')
       expect(section).toContain('Active Settings')
     })
   })

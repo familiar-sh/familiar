@@ -14,11 +14,12 @@ export function buildSettingsSection(settings: ProjectSettings): string {
 
   if (settings.simplifyTaskTitles) {
     lines.push(
-      '- **`simplifyTaskTitles` is ON**: Simplify the task title to a short descriptive name ' +
-        '(3-6 words) and **conserve the original verbose title/prompt** by writing it into the task ' +
-        'document (`document.md`) under an `## Original request` heading before doing any other work. ' +
-        'The original request text must never be lost. Use `familiar update $FAMILIAR_TASK_ID --title "Short title"` ' +
-        'to update the title.'
+      '- **`simplifyTaskTitles` is ON**: You MUST simplify the task title to a short descriptive name ' +
+        '(3-6 words) **regardless of how long or short the current title is**. Always do this. ' +
+        'FIRST, save the original title/prompt verbatim into `document.md` under an `## Original Prompt` heading ' +
+        '(this section must always remain at the top of the document and must never be modified or deleted). ' +
+        'THEN, shorten the title using `familiar update $FAMILIAR_TASK_ID --title "Short title"`. ' +
+        'The original prompt text must never be lost.'
     )
   }
 

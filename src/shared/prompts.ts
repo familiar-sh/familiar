@@ -364,20 +364,28 @@ familiar update $FAMILIAR_TASK_ID --agent-status running
 familiar log $FAMILIAR_TASK_ID "Starting work"
 \\\`\\\`\\\`
 
-## Step 3: Log progress at milestones
+## Step 3: Tidy up your task (MANDATORY — every time)
+
+Before doing any work: add labels, save original prompt to document.md, and simplify title if enabled. See \\\`familiar agents\\\` output for full details.
+
+## Step 4: Do the work — log progress at milestones
 
 \\\`\\\`\\\`bash
 familiar log $FAMILIAR_TASK_ID "Implemented X — moving to tests"
 \\\`\\\`\\\`
 
-## Step 4: Commit your work
+## Step 5: Commit your work
 
 \\\`\\\`\\\`bash
 git add <changed-files>
 git commit -m "feat: <short description>"
 \\\`\\\`\\\`
 
-## Step 5: On completion
+## Step 6: Update task notes (MANDATORY — every time)
+
+Before completion, update document.md with a summary and any learnings. Keep the Original Prompt section at the top.
+
+## Step 7: On completion
 
 \\\`\\\`\\\`bash
 familiar status $FAMILIAR_TASK_ID in-review
@@ -434,9 +442,13 @@ familiar update $FAMILIAR_TASK_ID --agent-status running
 familiar log $FAMILIAR_TASK_ID "Starting work"
 \`\`\`
 
-### 3. Classify your task
+### 3. Tidy up your task (MANDATORY — every time)
 
-After reading the task, add the appropriate label based on the title and description:
+**You MUST complete ALL of the following before doing any implementation work.** This applies on every single agent run, not just the first time.
+
+#### 3a. Classify with labels
+
+Always add a label. Infer the type from the title and description:
 
 | Label | When to use |
 |-------|-------------|
@@ -445,10 +457,42 @@ After reading the task, add the appropriate label based on the title and descrip
 | \`chore\` | Maintenance, refactoring, dependency updates, CI/CD, docs |
 
 \`\`\`bash
-familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, improvement, chore
+familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, chore
 \`\`\`
 
-### 4. Log progress
+#### 3b. Preserve the original prompt in document.md
+
+The task title often contains the full user prompt/request. **You MUST save the original title/prompt into \`document.md\` before any other changes.** The original prompt must ALWAYS remain at the top of the document, under an \`## Original Prompt\` heading. Never delete or move it.
+
+If \`document.md\` is empty or does not yet have an \`## Original Prompt\` section, write it now:
+
+\`\`\`bash
+# Write the original prompt to document.md (use the familiar CLI or write directly)
+# The ## Original Prompt section must ALWAYS be the first section in the document
+\`\`\`
+
+Example document.md structure:
+\`\`\`markdown
+## Original Prompt
+
+<the original task title or user request, verbatim>
+
+---
+
+## Notes
+
+<any notes added during work>
+\`\`\`
+
+#### 3c. Simplify the title (if \`simplifyTaskTitles\` setting is enabled)
+
+If the Active Settings section below says \`simplifyTaskTitles\` is ON, **always** shorten the title to 3–6 words regardless of how long or short it already is. Do this AFTER saving the original prompt to \`document.md\`.
+
+\`\`\`bash
+familiar update $FAMILIAR_TASK_ID --title "Short descriptive title"
+\`\`\`
+
+### 4. Do the work — log progress at milestones
 
 \`\`\`bash
 familiar log $FAMILIAR_TASK_ID "Implemented feature X — moving to tests"
@@ -463,7 +507,35 @@ git commit -m "feat: short description"
 
 Use conventional commit prefixes: \`feat:\`, \`fix:\`, \`refactor:\`, \`docs:\`, \`test:\`, \`chore:\`. Do NOT push unless explicitly asked.
 
-### 6. Signal completion
+### 6. Update task notes (MANDATORY — every time)
+
+**Before signaling completion, you MUST update \`document.md\` with:**
+
+1. **A summary** of what was done in this iteration (append after the \`---\` separator, below the original prompt)
+2. **Any meaningful learnings** that could be useful for the future (edge cases found, gotchas, decisions made, etc.)
+
+Keep the \`## Original Prompt\` section at the top — never modify or remove it. Append your summary below it.
+
+Example:
+\`\`\`markdown
+## Original Prompt
+
+<original prompt — untouched>
+
+---
+
+## Summary
+
+- Implemented X by modifying Y and Z
+- Added tests for A and B
+
+## Learnings
+
+- The foo module requires bar to be initialized first
+- Edge case: empty arrays need special handling in baz()
+\`\`\`
+
+### 7. Signal completion
 
 **Important:** Task status and agent status are independent. Only move the task to \`in-review\` if you are explicitly requesting human review. Setting \`--agent-status done\` does **not** automatically change the task's board column.
 
