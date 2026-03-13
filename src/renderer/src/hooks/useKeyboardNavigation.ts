@@ -216,11 +216,14 @@ export function useKeyboardNavigation({
         }
 
         case 'Enter': {
-          // Open focused task detail (terminal gets focus by default)
+          // Open focused task detail and focus the terminal
           e.preventDefault()
           const task = getFocusedTask()
           if (task) {
             openTaskDetail(task.id)
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'terminal' }))
+            }, 50)
           }
           break
         }
