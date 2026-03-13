@@ -71,6 +71,11 @@ function getShellEnv(): Record<string, string> {
     pathSet.add(p)
   }
   env.PATH = Array.from(pathSet).join(':')
+
+  // Remove CLAUDECODE so that Claude Code can be launched inside Familiar terminals
+  // even when the Familiar app itself was started from a Claude Code session.
+  delete env.CLAUDECODE
+
   return env
 }
 

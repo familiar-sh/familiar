@@ -78,6 +78,41 @@ function createMockTmux(): ConstructorParameters<typeof ElectronPtyManager>[0] {
   } as unknown as ConstructorParameters<typeof ElectronPtyManager>[0]
 }
 
+describe('getShellEnv CLAUDECODE removal', () => {
+  it('should not pass CLAUDECODE to spawned terminals', async () => {
+    // Simulate Familiar being launched from a Claude Code session
+    process.env.CLAUDECODE = '1'
+
+    // Re-import to get fresh module with the env set
+    // We can verify by creating a manager and checking the env passed to pty.spawn
+    const pty = await import('node-pty')
+    const mockPty = {
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+      pid: 123
+    }
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockReturnValue(mockPty)
+
+    const mockTmux = createMockTmux()
+    const manager = new ElectronPtyManager(mockTmux)
+
+    await manager.create('test-task', 'pane-0', '/tmp')
+
+    // Check that pty.spawn was called with an env that does NOT include CLAUDECODE
+    const spawnCall = (pty.spawn as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(spawnCall).toBeDefined()
+    const spawnEnv = spawnCall[2]?.env as Record<string, string> | undefined
+    expect(spawnEnv).toBeDefined()
+    expect(spawnEnv!.CLAUDECODE).toBeUndefined()
+
+    // Cleanup
+    delete process.env.CLAUDECODE
+  })
+})
+
 describe('ElectronPtyManager inactivity detection', () => {
   let manager: ElectronPtyManager
   let mockTmux: ReturnType<typeof createMockTmux>
