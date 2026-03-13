@@ -1,13 +1,29 @@
 import { Menu, app, dialog, BrowserWindow, shell } from 'electron'
 import { spawn } from 'child_process'
 import { is } from '@electron-toolkit/utils'
+import { UpdateService } from './services/update-service'
 
-export function buildAppMenu(mainWindow: BrowserWindow): Menu {
+export function buildAppMenu(mainWindow: BrowserWindow, updateService: UpdateService): Menu {
   const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: app.name,
       submenu: [
         { role: 'about' },
+        {
+          label: 'Check for Updates…',
+          click: async (): Promise<void> => {
+            const update = await updateService.checkForUpdates(true)
+            if (update) {
+              mainWindow.webContents.send('update:available', update)
+            } else {
+              dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'No Updates Available',
+                message: `You're on the latest version (v${app.getVersion()}).`
+              })
+            }
+          }
+        },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },

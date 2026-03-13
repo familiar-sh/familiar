@@ -110,7 +110,7 @@ function createWindow(): void {
   registerUpdateHandlers(mainWindow, updateService)
 
   // Build and set the application menu
-  const appMenu = buildAppMenu(mainWindow)
+  const appMenu = buildAppMenu(mainWindow, updateService)
   Menu.setApplicationMenu(appMenu)
 }
 
