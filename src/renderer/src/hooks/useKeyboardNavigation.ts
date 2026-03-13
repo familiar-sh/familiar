@@ -28,8 +28,8 @@ export function useKeyboardNavigation({
     taskDetailOpen
   } = useUIStore()
 
-  const { updateTask, deleteTask, deleteTasks } = useTaskStore()
-  const { selectedTaskIds, clearSelection } = useBoardStore()
+  const { updateTask, deleteTask, deleteTasks, reorderTask } = useTaskStore()
+  const { selectedTaskIds, clearSelection, toggleTaskSelection } = useBoardStore()
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
 
   // Track 's' key prefix for status-change chord (s + 1-5)
@@ -71,9 +71,14 @@ export function useKeyboardNavigation({
         const newStatus = statusMap[e.key]
         if (newStatus) {
           e.preventDefault()
-          const task = getFocusedTask()
-          if (task) {
-            updateTask({ ...task, status: newStatus })
+          if (selectedTaskIds.size > 0) {
+            moveTasks(Array.from(selectedTaskIds), newStatus, Infinity)
+            clearSelection()
+          } else {
+            const task = getFocusedTask()
+            if (task) {
+              updateTask({ ...task, status: newStatus })
+            }
           }
           return
         }
@@ -102,24 +107,62 @@ export function useKeyboardNavigation({
       switch (e.key) {
         case 'j':
         case 'ArrowDown': {
-          // Move down within column
           e.preventDefault()
           if (currentTasks.length > 0) {
-            const next = Math.min(focusedTaskIndex + 1, currentTasks.length - 1)
-            setFocusedTask(next)
+            if (e.altKey && e.key === 'ArrowDown') {
+              // Option+Down: move card one position down within column
+              const task = getFocusedTask()
+              if (task && focusedTaskIndex < currentTasks.length - 1) {
+                reorderTask(task.id, focusedTaskIndex + 1)
+                setFocusedTask(focusedTaskIndex + 1)
+              }
+            } else if (e.shiftKey && e.key === 'ArrowDown') {
+              // Shift+Down: select current card and move focus down
+              const task = getFocusedTask()
+              if (task) {
+                toggleTaskSelection(task.id, true)
+              }
+              const next = Math.min(focusedTaskIndex + 1, currentTasks.length - 1)
+              setFocusedTask(next)
+            } else {
+              // Move down within column
+              const next = Math.min(focusedTaskIndex + 1, currentTasks.length - 1)
+              setFocusedTask(next)
+            }
           }
           break
         }
 
         case 'k':
         case 'ArrowUp': {
-          // Move up within column, or focus input when at top
           e.preventDefault()
-          if (focusedTaskIndex === 0 && onFocusInput) {
-            onFocusInput(focusedColumnIndex)
-          } else if (currentTasks.length > 0) {
-            const prev = Math.max(focusedTaskIndex - 1, 0)
-            setFocusedTask(prev)
+          if (e.altKey && e.key === 'ArrowUp') {
+            // Option+Up: move card one position up within column
+            if (currentTasks.length > 0) {
+              const task = getFocusedTask()
+              if (task && focusedTaskIndex > 0) {
+                reorderTask(task.id, focusedTaskIndex - 1)
+                setFocusedTask(focusedTaskIndex - 1)
+              }
+            }
+          } else if (e.shiftKey && e.key === 'ArrowUp') {
+            // Shift+Up: select current card and move focus up
+            if (currentTasks.length > 0) {
+              const task = getFocusedTask()
+              if (task) {
+                toggleTaskSelection(task.id, true)
+              }
+              const prev = Math.max(focusedTaskIndex - 1, 0)
+              setFocusedTask(prev)
+            }
+          } else {
+            // Move up within column, or focus input when at top
+            if (focusedTaskIndex === 0 && onFocusInput) {
+              onFocusInput(focusedColumnIndex)
+            } else if (currentTasks.length > 0) {
+              const prev = Math.max(focusedTaskIndex - 1, 0)
+              setFocusedTask(prev)
+            }
           }
           break
         }
@@ -177,19 +220,24 @@ export function useKeyboardNavigation({
         case '2':
         case '3':
         case '4': {
-          // Set priority of focused task
+          // Set priority of selected tasks or focused task
           e.preventDefault()
-          const task = getFocusedTask()
-          if (task) {
-            const priorityMap: Record<string, Priority> = {
-              '1': 'urgent',
-              '2': 'high',
-              '3': 'medium',
-              '4': 'low'
-            }
-            const newPriority = priorityMap[e.key]
-            if (newPriority) {
-              updateTask({ ...task, priority: newPriority })
+          const priorityMap: Record<string, Priority> = {
+            '1': 'urgent',
+            '2': 'high',
+            '3': 'medium',
+            '4': 'low'
+          }
+          const newPriority = priorityMap[e.key]
+          if (newPriority) {
+            if (selectedTaskIds.size > 0) {
+              setTasksPriority(Array.from(selectedTaskIds), newPriority)
+              clearSelection()
+            } else {
+              const task = getFocusedTask()
+              if (task) {
+                updateTask({ ...task, priority: newPriority })
+              }
             }
           }
           break
@@ -214,8 +262,8 @@ export function useKeyboardNavigation({
         case 's': {
           // Start status-change chord: s + 1-5
           e.preventDefault()
-          const task = getFocusedTask()
-          if (task) {
+          const hasTarget = selectedTaskIds.size > 0 || getFocusedTask()
+          if (hasTarget) {
             statusPending.current = true
             if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
             statusTimeoutRef.current = setTimeout(() => {
@@ -273,11 +321,15 @@ export function useKeyboardNavigation({
     updateTask,
     deleteTask,
     deleteTasks,
+    reorderTask,
+    moveTasks,
+    setTasksPriority,
     getFocusedTask,
     onCreateTask,
     onFocusInput,
     selectedTaskIds,
     clearSelection,
+    toggleTaskSelection,
     markReadByTaskId
   ])
 }

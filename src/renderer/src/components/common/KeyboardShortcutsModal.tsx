@@ -31,6 +31,10 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['k', '↑'], description: 'Move up in column' },
       { keys: ['h', '←'], description: 'Move to previous column' },
       { keys: ['l', '→'], description: 'Move to next column' },
+      { keys: ['⇧', '↑'], description: 'Select previous card' },
+      { keys: ['⇧', '↓'], description: 'Select next card' },
+      { keys: ['⌥', '↑'], description: 'Move card up' },
+      { keys: ['⌥', '↓'], description: 'Move card down' },
       { keys: ['Enter'], description: 'Open selected task' },
       { keys: ['c'], description: 'Create task in focused column' }
     ]

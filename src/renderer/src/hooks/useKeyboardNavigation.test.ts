@@ -40,8 +40,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 const COLUMN_ORDER: TaskStatus[] = ['todo', 'in-progress', 'in-review', 'done', 'archived']
 
-function fireKey(key: string): void {
-  const event = new KeyboardEvent('keydown', { key, bubbles: true })
+function fireKey(key: string, modifiers: { altKey?: boolean; shiftKey?: boolean } = {}): void {
+  const event = new KeyboardEvent('keydown', { key, bubbles: true, ...modifiers })
   window.dispatchEvent(event)
 }
 
@@ -428,6 +428,110 @@ describe('useKeyboardNavigation', () => {
     await act(async () => fireKey('r'))
     expect(mockApi.markNotificationsByTaskRead).toHaveBeenCalledWith('tsk_a')
     expect(mockApi.markNotificationsByTaskRead).toHaveBeenCalledWith('tsk_b')
+  })
+
+  // Option+Arrow (Alt+Arrow) — reorder card within column
+  it('Alt+ArrowDown moves focused card one position down', async () => {
+    // Focus on task1 (index 0) in todo column — task2 is at index 1
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 0 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowDown', { altKey: true }))
+    await vi.waitFor(() => {
+      // Focus should follow the moved card
+      expect(useUIStore.getState().focusedTaskIndex).toBe(1)
+      // reorderTask should have been called (task moved from index 0 to 1)
+      expect(mockApi.updateTask).toHaveBeenCalled()
+    })
+  })
+
+  it('Alt+ArrowUp moves focused card one position up', async () => {
+    // Focus on task2 (index 1) in todo column
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 1 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowUp', { altKey: true }))
+    await vi.waitFor(() => {
+      // Focus should follow the moved card
+      expect(useUIStore.getState().focusedTaskIndex).toBe(0)
+      expect(mockApi.updateTask).toHaveBeenCalled()
+    })
+  })
+
+  it('Alt+ArrowDown does nothing when card is at bottom of column', () => {
+    // Focus on task2 (index 1, last in todo column)
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 1 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowDown', { altKey: true }))
+    // Focus should not change
+    expect(useUIStore.getState().focusedTaskIndex).toBe(1)
+    // reorderTask should not have been called
+    expect(mockApi.updateTask).not.toHaveBeenCalled()
+  })
+
+  it('Alt+ArrowUp does nothing when card is at top of column', () => {
+    // Focus on task1 (index 0, first in todo column)
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 0 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowUp', { altKey: true }))
+    // Focus should not change
+    expect(useUIStore.getState().focusedTaskIndex).toBe(0)
+    expect(mockApi.updateTask).not.toHaveBeenCalled()
+  })
+
+  // Shift+Arrow — extend selection
+  it('Shift+ArrowDown selects current card and moves focus down', () => {
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 0 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowDown', { shiftKey: true }))
+    // Current card (tsk_a) should be selected
+    expect(useBoardStore.getState().selectedTaskIds.has('tsk_a')).toBe(true)
+    // Focus should have moved down
+    expect(useUIStore.getState().focusedTaskIndex).toBe(1)
+  })
+
+  it('Shift+ArrowUp selects current card and moves focus up', () => {
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 1 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowUp', { shiftKey: true }))
+    // Current card (tsk_b) should be selected
+    expect(useBoardStore.getState().selectedTaskIds.has('tsk_b')).toBe(true)
+    // Focus should have moved up
+    expect(useUIStore.getState().focusedTaskIndex).toBe(0)
+  })
+
+  it('Shift+ArrowDown accumulates selection across multiple presses', () => {
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 0 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowDown', { shiftKey: true }))
+    // tsk_a selected, focus on index 1
+    expect(useBoardStore.getState().selectedTaskIds.has('tsk_a')).toBe(true)
+    expect(useUIStore.getState().focusedTaskIndex).toBe(1)
+
+    act(() => fireKey('ArrowDown', { shiftKey: true }))
+    // tsk_b also selected now (toggle adds it)
+    expect(useBoardStore.getState().selectedTaskIds.has('tsk_b')).toBe(true)
+    // Focus stays at 1 (can't go further)
+    expect(useUIStore.getState().focusedTaskIndex).toBe(1)
   })
 
   it('does not intercept keys when target is an input', () => {
