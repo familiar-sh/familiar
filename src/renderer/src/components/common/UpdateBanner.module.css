@@ -1,0 +1,73 @@
+/* ==========================================================================
+   UpdateBanner — Subtle top banner for app updates
+   ========================================================================== */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  background-color: var(--accent-subtle);
+  border-bottom: 1px solid var(--accent);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  min-height: 32px;
+}
+
+.message {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.versionBadge {
+  font-weight: var(--font-weight-semibold);
+  color: var(--accent-hover);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.downloadButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  background-color: var(--accent);
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.downloadButton:hover {
+  background-color: var(--accent-hover);
+}
+
+.dismissButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.dismissButton:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+}

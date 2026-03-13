@@ -100,6 +100,26 @@ declare global {
 
       // App info
       getVersion(): Promise<string>
+
+      // Updates
+      checkForUpdates(): Promise<{
+        currentVersion: string
+        latestVersion: string
+        releaseUrl: string
+        releaseNotes: string
+        publishedAt: string
+      } | null>
+      dismissUpdate(version: string): Promise<void>
+      downloadUpdate(releaseUrl: string): Promise<void>
+      onUpdateAvailable(
+        callback: (info: {
+          currentVersion: string
+          latestVersion: string
+          releaseUrl: string
+          releaseNotes: string
+          publishedAt: string
+        }) => void
+      ): () => void
     }
   }
 }

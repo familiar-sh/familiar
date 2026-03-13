@@ -152,7 +152,46 @@ const api = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
 
   // App info
-  getVersion: (): Promise<string> => ipcRenderer.invoke('app:version')
+  getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
+
+  // Updates
+  checkForUpdates: (): Promise<{
+    currentVersion: string
+    latestVersion: string
+    releaseUrl: string
+    releaseNotes: string
+    publishedAt: string
+  } | null> => ipcRenderer.invoke('update:check'),
+  dismissUpdate: (version: string): Promise<void> =>
+    ipcRenderer.invoke('update:dismiss', version),
+  downloadUpdate: (releaseUrl: string): Promise<void> =>
+    ipcRenderer.invoke('update:download', releaseUrl),
+  onUpdateAvailable: (
+    callback: (info: {
+      currentVersion: string
+      latestVersion: string
+      releaseUrl: string
+      releaseNotes: string
+      publishedAt: string
+    }) => void
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      info: {
+        currentVersion: string
+        latestVersion: string
+        releaseUrl: string
+        releaseNotes: string
+        publishedAt: string
+      }
+    ): void => {
+      callback(info)
+    }
+    ipcRenderer.on('update:available', handler)
+    return () => {
+      ipcRenderer.removeListener('update:available', handler)
+    }
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

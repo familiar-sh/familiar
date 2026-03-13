@@ -9,8 +9,10 @@ import { registerFileHandlers } from './ipc/file-handlers'
 import { registerNotificationHandlers } from './ipc/notification-handlers'
 import { registerWindowHandlers } from './ipc/window-handlers'
 import { registerCliHandlers } from './ipc/cli-handlers'
+import { registerUpdateHandlers } from './ipc/update-handlers'
 import { DataService } from './services/data-service'
 import { FileWatcher } from './services/file-watcher'
+import { UpdateService } from './services/update-service'
 import { buildAppMenu } from './menu'
 
 // Prevent unhandled errors from crashing the app (e.g. PTY spawn failures under EMFILE)
@@ -23,6 +25,7 @@ process.on('unhandledRejection', (reason) => {
 
 const tmuxManager = new ElectronTmuxManager()
 const ptyManager = new ElectronPtyManager(tmuxManager)
+const updateService = new UpdateService()
 let fileWatcher: FileWatcher | null = null
 
 // Register custom protocol scheme for serving attachment files
@@ -104,6 +107,7 @@ function createWindow(): void {
     (fw) => { fileWatcher = fw }
   )
   registerCliHandlers()
+  registerUpdateHandlers(mainWindow, updateService)
 
   // Build and set the application menu
   const appMenu = buildAppMenu(mainWindow)
@@ -159,4 +163,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   fileWatcher?.stop()
   fileWatcher = null
+  updateService.stopPeriodicCheck()
 })
