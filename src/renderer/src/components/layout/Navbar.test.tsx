@@ -37,7 +37,7 @@ const mockClearNotifications = vi.fn()
 async function renderNavbarAndWait(): Promise<ReturnType<typeof render>> {
   const result = render(<Navbar />)
   await waitFor(() => {
-    expect(screen.getByText('my-project')).toBeTruthy()
+    expect(screen.getByText(/my-project/)).toBeTruthy()
   })
   return result
 }
@@ -79,19 +79,24 @@ describe('Navbar', () => {
 
   it('shows project name from folder after loading', async () => {
     await renderNavbarAndWait()
-    expect(screen.getByText('my-project')).toBeTruthy()
+    expect(screen.getByText(/my-project/)).toBeTruthy()
   })
 
   it('shows projectState name as fallback before project root loads', () => {
     mockGetProjectRoot.mockReturnValue(new Promise(() => {})) // never resolves
     render(<Navbar />)
-    expect(screen.getByText('Test Project')).toBeTruthy()
+    expect(screen.getByText(/Test Project/)).toBeTruthy()
   })
 
   it('shows APP_NAME when no project state', () => {
     useTaskStore.setState({ projectState: null })
     render(<Navbar />)
-    expect(screen.getByText('Familiar')).toBeTruthy()
+    expect(screen.getByText(/Familiar/)).toBeTruthy()
+  })
+
+  it('shows folder emoji next to project name', async () => {
+    await renderNavbarAndWait()
+    expect(screen.getByText(/📁/)).toBeTruthy()
   })
 
   // --- Dashboard button ---

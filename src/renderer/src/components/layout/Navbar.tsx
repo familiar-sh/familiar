@@ -116,7 +116,7 @@ export function Navbar(): React.JSX.Element {
 
   return (
     <nav className={styles.navbar}>
-      <span className={styles.projectName}>{projectName}</span>
+      <span className={styles.projectName}>📁 {projectName}</span>
 
       <div className={styles.navGroup}>
         {/* Dashboard / home button */}
