@@ -42,6 +42,10 @@
 .projectList {
   flex: 1;
   overflow-y: auto;
+  padding: var(--space-1) 0;
+}
+
+.sidebarExpanded .projectList {
   padding: var(--space-1);
 }
 
@@ -49,12 +53,18 @@
 .projectItem {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-2);
+  padding: var(--space-1);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--transition-fast);
   position: relative;
+}
+
+.sidebarExpanded .projectItem {
+  justify-content: flex-start;
+  padding: var(--space-2);
 }
 
 .projectItem:hover {
