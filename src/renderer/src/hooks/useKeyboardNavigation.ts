@@ -209,7 +209,8 @@ export function useKeyboardNavigation({
           } else if (selectedTaskIds.size > 0) {
             clearSelection()
           } else if (onFocusInput) {
-            onFocusInput(focusedColumnIndex)
+            setFocusedColumn(0)
+            onFocusInput(0)
           }
           break
         }

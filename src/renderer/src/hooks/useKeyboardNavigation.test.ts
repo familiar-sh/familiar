@@ -228,8 +228,9 @@ describe('useKeyboardNavigation', () => {
     expect(useUIStore.getState().taskDetailOpen).toBe(false)
   })
 
-  it('Escape focuses create-task input when no selection and no task detail', () => {
+  it('Escape focuses create-task input in Todo column regardless of current column', () => {
     const onFocusInput = vi.fn()
+    useUIStore.setState({ focusedColumnIndex: 2, focusedTaskIndex: 0 })
     useBoardStore.setState({ selectedTaskIds: new Set() })
     renderHook(() =>
       useKeyboardNavigation({
@@ -240,7 +241,9 @@ describe('useKeyboardNavigation', () => {
     )
 
     act(() => fireKey('Escape'))
+    // Should always target Todo column (index 0)
     expect(onFocusInput).toHaveBeenCalledWith(0)
+    expect(useUIStore.getState().focusedColumnIndex).toBe(0)
   })
 
   it('Escape prioritizes closing task detail over clearing selection', () => {
