@@ -28,7 +28,8 @@ export function useKeyboardNavigation({
     taskDetailOpen
   } = useUIStore()
 
-  const { updateTask, deleteTask, deleteTasks, reorderTask } = useTaskStore()
+  const { updateTask, deleteTask, deleteTasks, reorderTask, moveTasks, setTasksPriority } =
+    useTaskStore()
   const { selectedTaskIds, clearSelection, toggleTaskSelection } = useBoardStore()
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
 

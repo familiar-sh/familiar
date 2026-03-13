@@ -59,7 +59,7 @@ export function TaskCard({
     data: { type: 'task', task, status: task.status }
   })
 
-  const { updateTask, deleteTask, deleteTasks } = useTaskStore()
+  const { updateTask, deleteTask, deleteTasks, moveTasks, setTasksPriority } = useTaskStore()
   const projectLabels = useProjectLabels()
   const contextMenu = useContextMenu()
   const [priorityOpen, setPriorityOpen] = useState(false)
@@ -70,6 +70,7 @@ export function TaskCard({
   const hasUnread = notifications.some((n) => !n.read && n.taskId === task.id)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
   const selectedTaskIds = useBoardStore((s) => s.selectedTaskIds)
+  const clearSelection = useBoardStore((s) => s.clearSelection)
 
   // Inline title editing
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -182,19 +183,27 @@ export function TaskCard({
 
   const handleStatusChange = useCallback(
     (status: TaskStatus) => {
-      updateTask({ ...task, status })
+      if (isMultiSelected && selectedTaskIds.size > 1) {
+        moveTasks(Array.from(selectedTaskIds), status, Infinity)
+        clearSelection()
+      } else {
+        updateTask({ ...task, status })
+      }
     },
-    [task, updateTask]
+    [task, updateTask, isMultiSelected, selectedTaskIds, moveTasks, clearSelection]
   )
 
   const handlePriorityChange = useCallback(
     (priority: Priority) => {
-      updateTask({ ...task, priority })
+      if (isMultiSelected && selectedTaskIds.size > 1) {
+        setTasksPriority(Array.from(selectedTaskIds), priority)
+        clearSelection()
+      } else {
+        updateTask({ ...task, priority })
+      }
     },
-    [task, updateTask]
+    [task, updateTask, isMultiSelected, selectedTaskIds, setTasksPriority, clearSelection]
   )
-
-  const clearSelection = useBoardStore((s) => s.clearSelection)
 
   const handleDelete = useCallback(() => {
     if (isMultiSelected && selectedTaskIds.size > 1) {
@@ -256,14 +265,15 @@ export function TaskCard({
       ? notifications.some((n) => !n.read && n.taskId && selectedTaskIds.has(n.taskId))
       : hasUnread
 
+  const isMulti = isMultiSelected && selectedTaskIds.size > 1
+
   const contextMenuItems: ContextMenuItem[] = [
     ...(hasUnreadInSelection
       ? [
           {
-            label:
-              isMultiSelected && selectedTaskIds.size > 1
-                ? `Mark ${selectedTaskIds.size} as Read`
-                : 'Mark as Read',
+            label: isMulti
+              ? `Mark ${selectedTaskIds.size} as Read`
+              : 'Mark as Read',
             onClick: handleMarkAsRead,
             shortcut: 'R'
           },
@@ -271,38 +281,38 @@ export function TaskCard({
         ]
       : []),
     {
-      label: 'Move to Todo',
+      label: isMulti ? `Move ${selectedTaskIds.size} to Todo` : 'Move to Todo',
       onClick: () => handleStatusChange('todo'),
       shortcut: ''
     },
     {
-      label: 'Move to In Progress',
+      label: isMulti ? `Move ${selectedTaskIds.size} to In Progress` : 'Move to In Progress',
       onClick: () => handleStatusChange('in-progress'),
       shortcut: ''
     },
     {
-      label: 'Move to Done',
+      label: isMulti ? `Move ${selectedTaskIds.size} to Done` : 'Move to Done',
       onClick: () => handleStatusChange('done'),
       shortcut: ''
     },
     { label: '', onClick: () => {}, divider: true },
     {
-      label: 'Urgent',
+      label: isMulti ? `Set ${selectedTaskIds.size} Urgent` : 'Urgent',
       onClick: () => handlePriorityChange('urgent'),
       shortcut: '1'
     },
     {
-      label: 'High',
+      label: isMulti ? `Set ${selectedTaskIds.size} High` : 'High',
       onClick: () => handlePriorityChange('high'),
       shortcut: '2'
     },
     {
-      label: 'Medium',
+      label: isMulti ? `Set ${selectedTaskIds.size} Medium` : 'Medium',
       onClick: () => handlePriorityChange('medium'),
       shortcut: '3'
     },
     {
-      label: 'Low',
+      label: isMulti ? `Set ${selectedTaskIds.size} Low` : 'Low',
       onClick: () => handlePriorityChange('low'),
       shortcut: '4'
     },
@@ -314,7 +324,7 @@ export function TaskCard({
     },
     { label: '', onClick: () => {}, divider: true },
     {
-      label: isMultiSelected && selectedTaskIds.size > 1
+      label: isMulti
         ? `Delete ${selectedTaskIds.size} Tasks`
         : 'Delete',
       onClick: handleDelete,

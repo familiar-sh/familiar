@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ProjectState, Task, TaskStatus, LabelConfig } from '@shared/types'
+import type { ProjectState, Task, TaskStatus, Priority, LabelConfig } from '@shared/types'
 import { useNotificationStore } from './notification-store'
 
 interface TaskStore {
@@ -23,6 +23,7 @@ interface TaskStore {
 
   // Bulk actions
   moveTasks: (taskIds: string[], newStatus: TaskStatus, startIndex: number) => Promise<void>
+  setTasksPriority: (taskIds: string[], priority: Priority) => Promise<void>
   archiveAllDone: () => Promise<void>
 
   // Labels
@@ -420,6 +421,33 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         await window.api.updateTask(updated)
       }
     }
+    await window.api.writeProjectState(newState)
+    set({ projectState: newState })
+  },
+
+  setTasksPriority: async (taskIds: string[], priority: Priority): Promise<void> => {
+    const { projectState } = get()
+    if (!projectState) throw new Error('Project not initialized')
+
+    const idSet = new Set(taskIds)
+    const now = new Date().toISOString()
+
+    const updatedTasks = projectState.tasks.map((t: Task) => {
+      if (idSet.has(t.id)) {
+        return { ...t, priority, updatedAt: now }
+      }
+      return t
+    })
+
+    // Persist each updated task
+    for (const id of taskIds) {
+      const updated = updatedTasks.find((t: Task) => t.id === id)
+      if (updated) {
+        await window.api.updateTask(updated)
+      }
+    }
+
+    const newState: ProjectState = { ...projectState, tasks: updatedTasks }
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
   },

@@ -669,6 +669,58 @@ describe('useTaskStore', () => {
     })
   })
 
+  describe('setTasksPriority', () => {
+    it('sets priority for multiple tasks at once', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0, priority: 'none' })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1, priority: 'low' })
+      const t3 = makeTask({ id: 'tsk_c', status: 'in-progress', sortOrder: 0, priority: 'none' })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().setTasksPriority(['tsk_a', 'tsk_b'], 'high')
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.priority).toBe('high')
+      expect(tasks.find((t) => t.id === 'tsk_b')!.priority).toBe('high')
+      expect(tasks.find((t) => t.id === 'tsk_c')!.priority).toBe('none') // untouched
+    })
+
+    it('persists each updated task via API', async () => {
+      const t1 = makeTask({ id: 'tsk_a', priority: 'none' })
+      const t2 = makeTask({ id: 'tsk_b', priority: 'none' })
+      const state = makeProjectState([t1, t2])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().setTasksPriority(['tsk_a', 'tsk_b'], 'urgent')
+
+      expect(mockApi.updateTask).toHaveBeenCalledTimes(2)
+      expect(mockApi.writeProjectState).toHaveBeenCalledTimes(1)
+    })
+
+    it('updates the updatedAt timestamp on affected tasks', async () => {
+      const t1 = makeTask({ id: 'tsk_a', updatedAt: '2020-01-01T00:00:00.000Z' })
+      const state = makeProjectState([t1])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().setTasksPriority(['tsk_a'], 'medium')
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.updatedAt).not.toBe('2020-01-01T00:00:00.000Z')
+    })
+
+    it('throws when project not initialized', async () => {
+      await expect(
+        useTaskStore.getState().setTasksPriority(['tsk_x'], 'high')
+      ).rejects.toThrow('Project not initialized')
+    })
+  })
+
   describe('archiveAllDone', () => {
     it('archives all done tasks', async () => {
       const t1 = makeTask({ id: 'tsk_a', status: 'done', sortOrder: 0, agentStatus: 'running' })
