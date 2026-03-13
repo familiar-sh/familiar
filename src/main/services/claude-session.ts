@@ -62,8 +62,38 @@ export function ensureForkSessionCopied(
 
   try {
     fs.mkdirSync(claudeProjectDir, { recursive: true })
-    fs.copyFileSync(parentSessionFile, childSessionFile)
-    console.log(`Copied session from ${forkedFrom} to ${taskId}`)
+
+    // Read the parent session and check for compaction boundaries.
+    // After compaction, the JSONL has two chains (both starting with parentUuid: null).
+    // Claude Code may pick the first (pre-compaction) chain instead of the last
+    // (post-compaction) chain. To fix this, only copy entries from the last
+    // compact_boundary onward so the child session has a single chain.
+    const content = fs.readFileSync(parentSessionFile, 'utf-8')
+    const lines = content.split('\n').filter((l) => l.trim().length > 0)
+
+    let lastCompactIndex = -1
+    for (let i = 0; i < lines.length; i++) {
+      try {
+        const entry = JSON.parse(lines[i])
+        if (entry.type === 'system' && entry.subtype === 'compact_boundary') {
+          lastCompactIndex = i
+        }
+      } catch {
+        // Skip malformed lines
+      }
+    }
+
+    if (lastCompactIndex >= 0) {
+      // Only copy from the last compaction boundary onward
+      const trimmedContent = lines.slice(lastCompactIndex).join('\n') + '\n'
+      fs.writeFileSync(childSessionFile, trimmedContent, 'utf-8')
+      console.log(`Copied compacted session from ${forkedFrom} to ${taskId} (trimmed ${lastCompactIndex} pre-compaction lines)`)
+    } else {
+      // No compaction — copy the entire file
+      fs.copyFileSync(parentSessionFile, childSessionFile)
+      console.log(`Copied session from ${forkedFrom} to ${taskId}`)
+    }
+
     return true
   } catch (err) {
     console.warn(`Failed to copy parent session for fork: ${err}`)

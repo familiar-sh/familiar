@@ -5,6 +5,8 @@ import { taskIdToUuid, resolveClaudeSessionCommand, ensureForkSessionCopied } fr
 const mockExistsSync = vi.fn()
 const mockCopyFileSync = vi.fn()
 const mockMkdirSync = vi.fn()
+const mockReadFileSync = vi.fn()
+const mockWriteFileSync = vi.fn()
 const mockHomedir = vi.fn().mockReturnValue('/Users/testuser')
 
 vi.mock('fs', async (importOriginal) => {
@@ -13,7 +15,9 @@ vi.mock('fs', async (importOriginal) => {
     ...actual,
     existsSync: (...args: Parameters<typeof actual.existsSync>) => mockExistsSync(...args),
     copyFileSync: (...args: Parameters<typeof actual.copyFileSync>) => mockCopyFileSync(...args),
-    mkdirSync: (...args: Parameters<typeof actual.mkdirSync>) => mockMkdirSync(...args)
+    mkdirSync: (...args: Parameters<typeof actual.mkdirSync>) => mockMkdirSync(...args),
+    readFileSync: (...args: Parameters<typeof actual.readFileSync>) => mockReadFileSync(...args),
+    writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => mockWriteFileSync(...args)
   }
 })
 
@@ -129,44 +133,129 @@ describe('resolveClaudeSessionCommand', () => {
 })
 
 describe('ensureForkSessionCopied', () => {
+  const childUuid = taskIdToUuid('tsk_child')
+  const parentUuid = taskIdToUuid('tsk_parent')
+  const projectDir = path.join('/Users/testuser', '.claude', 'projects', '-project')
+  const childSessionFile = path.join(projectDir, `${childUuid}.jsonl`)
+  const parentSessionFile = path.join(projectDir, `${parentUuid}.jsonl`)
+
+  // Helper: build a JSONL string from an array of objects
+  function buildJsonl(entries: Record<string, unknown>[]): string {
+    return entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
+  }
+
+  // A non-compacted session (no compact_boundary)
+  const simpleSession = buildJsonl([
+    { parentUuid: null, type: 'progress', uuid: 'a1', sessionId: 'parent-session' },
+    { parentUuid: 'a1', type: 'user', uuid: 'a2', message: { role: 'user', content: 'hello' } },
+    { parentUuid: 'a2', type: 'assistant', uuid: 'a3', message: { role: 'assistant', content: 'hi' } }
+  ])
+
+  // A compacted session with pre- and post-compaction entries
+  const compactedSession = buildJsonl([
+    { parentUuid: null, type: 'progress', uuid: 'a1', sessionId: 'parent-session' },
+    { parentUuid: 'a1', type: 'user', uuid: 'a2', message: { role: 'user', content: 'hello' } },
+    { parentUuid: 'a2', type: 'assistant', uuid: 'a3', message: { role: 'assistant', content: 'hi' } },
+    { type: 'file-history-snapshot', parentUuid: null, uuid: 'snap1' },
+    { type: 'last-prompt', parentUuid: null, uuid: 'lp1', sessionId: 'parent-session' },
+    { parentUuid: null, logicalParentUuid: 'a3', type: 'system', subtype: 'compact_boundary', uuid: 'cb1', sessionId: 'parent-session', content: 'Conversation compacted' },
+    { parentUuid: 'cb1', type: 'user', uuid: 'b1', message: { role: 'user', content: 'Summary of previous conversation...' } },
+    { parentUuid: 'b1', type: 'assistant', uuid: 'b2', message: { role: 'assistant', content: 'Continuing from summary' } }
+  ])
+
   beforeEach(() => {
     mockHomedir.mockReturnValue('/Users/testuser')
     mockExistsSync.mockReset()
     mockCopyFileSync.mockReset()
     mockMkdirSync.mockReset()
+    mockReadFileSync.mockReset()
+    mockWriteFileSync.mockReset()
   })
 
-  it('copies parent session file to child path when parent exists and child does not', () => {
-    const childUuid = taskIdToUuid('tsk_child')
-    const parentUuid = taskIdToUuid('tsk_parent')
-    const projectDir = path.join('/Users/testuser', '.claude', 'projects', '-project')
-    const childSessionFile = path.join(projectDir, `${childUuid}.jsonl`)
-    const parentSessionFile = path.join(projectDir, `${parentUuid}.jsonl`)
+  it('copies entire file when parent has no compaction', () => {
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p === childSessionFile) return false
+      if (p === parentSessionFile) return true
+      return false
+    })
+    mockReadFileSync.mockReturnValue(simpleSession)
+
+    const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+
+    expect(result).toBe(true)
+    expect(mockCopyFileSync).toHaveBeenCalledWith(parentSessionFile, childSessionFile)
+    expect(mockWriteFileSync).not.toHaveBeenCalled()
+  })
+
+  it('trims pre-compaction entries when parent session was compacted', () => {
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p === childSessionFile) return false
+      if (p === parentSessionFile) return true
+      return false
+    })
+    mockReadFileSync.mockReturnValue(compactedSession)
+
+    const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+
+    expect(result).toBe(true)
+    // Should NOT use copyFileSync for compacted sessions
+    expect(mockCopyFileSync).not.toHaveBeenCalled()
+    // Should write only entries from compact_boundary onward
+    expect(mockWriteFileSync).toHaveBeenCalledTimes(1)
+    const writtenContent = mockWriteFileSync.mock.calls[0][1] as string
+    const writtenLines = writtenContent.trim().split('\n')
+    // compact_boundary + 2 entries after it = 3 lines
+    expect(writtenLines).toHaveLength(3)
+    // First line should be the compact_boundary
+    const firstEntry = JSON.parse(writtenLines[0])
+    expect(firstEntry.type).toBe('system')
+    expect(firstEntry.subtype).toBe('compact_boundary')
+    // Last line should be the post-compaction assistant message
+    const lastEntry = JSON.parse(writtenLines[2])
+    expect(lastEntry.type).toBe('assistant')
+    expect(lastEntry.uuid).toBe('b2')
+  })
+
+  it('uses last compact_boundary when session was compacted multiple times', () => {
+    const doubleCompactedSession = buildJsonl([
+      { parentUuid: null, type: 'progress', uuid: 'a1' },
+      { parentUuid: 'a1', type: 'user', uuid: 'a2' },
+      // First compaction
+      { parentUuid: null, type: 'system', subtype: 'compact_boundary', uuid: 'cb1', content: 'Compacted 1' },
+      { parentUuid: 'cb1', type: 'user', uuid: 'b1' },
+      { parentUuid: 'b1', type: 'assistant', uuid: 'b2' },
+      // Second compaction
+      { parentUuid: null, type: 'system', subtype: 'compact_boundary', uuid: 'cb2', content: 'Compacted 2' },
+      { parentUuid: 'cb2', type: 'user', uuid: 'c1' },
+      { parentUuid: 'c1', type: 'assistant', uuid: 'c2' }
+    ])
 
     mockExistsSync.mockImplementation((p: string) => {
       if (p === childSessionFile) return false
       if (p === parentSessionFile) return true
       return false
     })
+    mockReadFileSync.mockReturnValue(doubleCompactedSession)
 
     const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     expect(result).toBe(true)
-    expect(mockCopyFileSync).toHaveBeenCalledWith(parentSessionFile, childSessionFile)
+    const writtenContent = mockWriteFileSync.mock.calls[0][1] as string
+    const writtenLines = writtenContent.trim().split('\n')
+    // Should only include from LAST compact_boundary: cb2 + c1 + c2 = 3 lines
+    expect(writtenLines).toHaveLength(3)
+    const firstEntry = JSON.parse(writtenLines[0])
+    expect(firstEntry.uuid).toBe('cb2')
   })
 
   it('skips copy when child session already exists', () => {
-    const childUuid = taskIdToUuid('tsk_child')
-    const childSessionFile = path.join(
-      '/Users/testuser', '.claude', 'projects', '-project', `${childUuid}.jsonl`
-    )
-
     mockExistsSync.mockImplementation((p: string) => p === childSessionFile)
 
     const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     expect(result).toBe(false)
     expect(mockCopyFileSync).not.toHaveBeenCalled()
+    expect(mockReadFileSync).not.toHaveBeenCalled()
   })
 
   it('returns false when parent session does not exist', () => {
@@ -178,19 +267,13 @@ describe('ensureForkSessionCopied', () => {
     expect(mockCopyFileSync).not.toHaveBeenCalled()
   })
 
-  it('handles copy failure gracefully', () => {
-    const childUuid = taskIdToUuid('tsk_child')
-    const parentUuid = taskIdToUuid('tsk_parent')
-    const projectDir = path.join('/Users/testuser', '.claude', 'projects', '-project')
-    const childSessionFile = path.join(projectDir, `${childUuid}.jsonl`)
-    const parentSessionFile = path.join(projectDir, `${parentUuid}.jsonl`)
-
+  it('handles read/write failure gracefully', () => {
     mockExistsSync.mockImplementation((p: string) => {
       if (p === childSessionFile) return false
       if (p === parentSessionFile) return true
       return false
     })
-    mockCopyFileSync.mockImplementation(() => {
+    mockReadFileSync.mockImplementation(() => {
       throw new Error('EACCES: permission denied')
     })
 
@@ -200,18 +283,13 @@ describe('ensureForkSessionCopied', () => {
   })
 
   it('after copy, resolveClaudeSessionCommand uses --resume for the child', () => {
-    const childUuid = taskIdToUuid('tsk_child')
-    const projectDir = path.join('/Users/testuser', '.claude', 'projects', '-project')
-    const childSessionFile = path.join(projectDir, `${childUuid}.jsonl`)
-    const parentUuid = taskIdToUuid('tsk_parent')
-    const parentSessionFile = path.join(projectDir, `${parentUuid}.jsonl`)
-
     // First call: ensureForkSessionCopied — child doesn't exist, parent does
     mockExistsSync.mockImplementation((p: string) => {
       if (p === childSessionFile) return false
       if (p === parentSessionFile) return true
       return false
     })
+    mockReadFileSync.mockReturnValue(simpleSession)
 
     ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
 
