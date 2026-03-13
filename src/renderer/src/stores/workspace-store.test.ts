@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useWorkspaceStore } from './workspace-store'
-import type { Workspace, WorkspaceConfig } from '@shared/types'
+import type { Workspace } from '@shared/types'
 
 // Mock window.api
 const mockApi = {

@@ -181,7 +181,8 @@ export class WorkspaceManager {
 
   setActiveProjectPath(projectPath: string): void {
     if (!this.dataServices.has(projectPath)) {
-      throw new Error(`Project not open: ${projectPath}`)
+      // Auto-open the project if it's not already open
+      this.openProjectInternal(projectPath)
     }
     this.activeProjectPath = projectPath
   }
@@ -204,6 +205,21 @@ export class WorkspaceManager {
     const target = projectPath ?? this.activeProjectPath
     if (!target) return null
     return this.fileWatchers.get(target) ?? null
+  }
+
+  /**
+   * Ensure all open projects have file watchers running.
+   * Called after BrowserWindow is available, since projects opened before
+   * the window existed won't have watchers.
+   */
+  ensureFileWatchers(window: BrowserWindow): void {
+    for (const [projectPath] of this.dataServices) {
+      if (!this.fileWatchers.has(projectPath)) {
+        const fw = new FileWatcher(projectPath, window)
+        fw.start()
+        this.fileWatchers.set(projectPath, fw)
+      }
+    }
   }
 
   // ─── Lifecycle ───────────────────────────────────────────────────

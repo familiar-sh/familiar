@@ -164,10 +164,13 @@ describe('WorkspaceManager', () => {
       expect(wm.getActiveProjectPath()).toBe('/tmp/b')
     })
 
-    it('throws when setting active to non-open project', () => {
+    it('auto-opens project when setting active to non-open project', () => {
       const wm = new WorkspaceManager()
       wm.openSingleProject('/tmp/a')
-      expect(() => wm.setActiveProjectPath('/tmp/nonexist')).toThrow('Project not open')
+      wm.setActiveProjectPath('/tmp/b')
+
+      expect(wm.getActiveProjectPath()).toBe('/tmp/b')
+      expect(wm.getOpenProjectPaths()).toContain('/tmp/b')
     })
 
     it('closeAll clears all state', () => {

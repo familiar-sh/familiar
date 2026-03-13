@@ -81,17 +81,9 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
 
-    // File watchers are now managed by WorkspaceManager
-    // Re-start watchers for existing projects with the window reference
-    const openPaths = workspaceManager.getOpenProjectPaths()
-    for (const projectPath of openPaths) {
-      if (!workspaceManager.getFileWatcher(projectPath)) {
-        // File watcher was created without mainWindow in openSingleProject
-        // Re-open to create watcher with window reference
-        workspaceManager.removeProjectFromWorkspace(projectPath)
-        workspaceManager.addProjectToWorkspace(projectPath)
-      }
-    }
+    // Projects opened before the window existed won't have file watchers.
+    // Start them now that the window is available.
+    workspaceManager.ensureFileWatchers(mainWindow)
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
