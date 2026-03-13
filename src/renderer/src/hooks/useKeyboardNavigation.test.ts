@@ -216,6 +216,47 @@ describe('useKeyboardNavigation', () => {
     expect(useUIStore.getState().activeTaskId).toBeNull()
   })
 
+  it('Escape clears multi-selection when no task detail is open', () => {
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a', 'tsk_b']) })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Escape'))
+    expect(useBoardStore.getState().selectedTaskIds.size).toBe(0)
+    // Task detail should remain closed
+    expect(useUIStore.getState().taskDetailOpen).toBe(false)
+  })
+
+  it('Escape focuses create-task input when no selection and no task detail', () => {
+    const onFocusInput = vi.fn()
+    useBoardStore.setState({ selectedTaskIds: new Set() })
+    renderHook(() =>
+      useKeyboardNavigation({
+        tasksByStatus,
+        columnOrder: COLUMN_ORDER,
+        onFocusInput
+      })
+    )
+
+    act(() => fireKey('Escape'))
+    expect(onFocusInput).toHaveBeenCalledWith(0)
+  })
+
+  it('Escape prioritizes closing task detail over clearing selection', () => {
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_a' })
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a', 'tsk_b']) })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Escape'))
+    // Task detail should close first
+    expect(useUIStore.getState().taskDetailOpen).toBe(false)
+    // Selection should still be there (cleared on next Escape)
+    expect(useBoardStore.getState().selectedTaskIds.size).toBe(2)
+  })
+
   it('c triggers onCreateTask callback', () => {
     const onCreateTask = vi.fn()
     renderHook(() =>

@@ -199,11 +199,17 @@ export function useKeyboardNavigation({
         }
 
         case 'Escape': {
-          // Close task detail / deselect
-          // Shift+Escape also works (needed when terminal has focus)
+          // Layered dismiss:
+          // 1. Close task detail if open
+          // 2. Clear multi-selection if active
+          // 3. Focus the create-task input
           e.preventDefault()
           if (taskDetailOpen) {
             closeTaskDetail()
+          } else if (selectedTaskIds.size > 0) {
+            clearSelection()
+          } else if (onFocusInput) {
+            onFocusInput(focusedColumnIndex)
           }
           break
         }
