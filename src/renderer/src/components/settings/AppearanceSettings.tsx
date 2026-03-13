@@ -1,5 +1,7 @@
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useUIStore } from '@renderer/stores/ui-store'
-import { getDarkThemes, getLightThemes, type ThemePreset } from '@shared/themes'
+import { getDarkThemes, getLightThemes, getThemePreset, type ThemePreset } from '@shared/themes'
 
 export function AppearanceSettings(): React.JSX.Element {
   const themeMode = useUIStore((s) => s.themeMode)
@@ -9,14 +11,17 @@ export function AppearanceSettings(): React.JSX.Element {
   const setDarkTheme = useUIStore((s) => s.setDarkTheme)
   const setLightTheme = useUIStore((s) => s.setLightTheme)
 
-  const darkThemes = getDarkThemes()
-  const lightThemes = getLightThemes()
+  const darkPreset = getThemePreset(darkTheme)
+  const lightPreset = getThemePreset(lightTheme)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Mode selector */}
-      <div>
-        <div style={labelStyle}>Mode</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={labelStyle}>Mode</div>
+          <div style={descStyle}>Follow system appearance or force light/dark</div>
+        </div>
         <div style={segmentedControlContainer}>
           {(['system', 'light', 'dark'] as const).map((mode) => (
             <button
@@ -25,13 +30,13 @@ export function AppearanceSettings(): React.JSX.Element {
               onClick={() => setThemeMode(mode)}
             >
               {mode === 'system' ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
                   <line x1="8" y1="21" x2="16" y2="21" />
                   <line x1="12" y1="17" x2="12" y2="21" />
                 </svg>
               ) : mode === 'light' ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
                   <circle cx="12" cy="12" r="5" />
                   <line x1="12" y1="1" x2="12" y2="3" />
                   <line x1="12" y1="21" x2="12" y2="23" />
@@ -43,7 +48,7 @@ export function AppearanceSettings(): React.JSX.Element {
                   <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
                 </svg>
               ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                 </svg>
               )}
@@ -53,46 +58,157 @@ export function AppearanceSettings(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Dark theme grid */}
-      <div style={themeMode === 'light' ? { opacity: 0.5 } : undefined}>
-        <div style={labelStyle}>Dark Theme</div>
-        {themeMode === 'light' && (
-          <div style={subtitleStyle}>Used when mode is Dark or System</div>
-        )}
-        <div style={gridStyle}>
-          {darkThemes.map((preset) => (
-            <ThemePreviewCard
-              key={preset.id}
-              preset={preset}
-              selected={darkTheme === preset.id}
-              onClick={() => setDarkTheme(preset.id)}
-            />
-          ))}
+      {/* Dark theme picker */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        ...(themeMode === 'light' ? { opacity: 0.5 } : {})
+      }}>
+        <div>
+          <div style={labelStyle}>Dark Theme</div>
+          {themeMode === 'light' && <div style={descStyle}>Used when mode is Dark or System</div>}
         </div>
+        <ThemePickerTrigger
+          preset={darkPreset}
+          themes={getDarkThemes()}
+          selectedId={darkTheme}
+          onSelect={setDarkTheme}
+        />
       </div>
 
-      {/* Light theme grid */}
-      <div style={themeMode === 'dark' ? { opacity: 0.5 } : undefined}>
-        <div style={labelStyle}>Light Theme</div>
-        {themeMode === 'dark' && (
-          <div style={subtitleStyle}>Used when mode is Light or System</div>
-        )}
-        <div style={gridStyle}>
-          {lightThemes.map((preset) => (
-            <ThemePreviewCard
-              key={preset.id}
-              preset={preset}
-              selected={lightTheme === preset.id}
-              onClick={() => setLightTheme(preset.id)}
-            />
-          ))}
+      {/* Light theme picker */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        ...(themeMode === 'dark' ? { opacity: 0.5 } : {})
+      }}>
+        <div>
+          <div style={labelStyle}>Light Theme</div>
+          {themeMode === 'dark' && <div style={descStyle}>Used when mode is Light or System</div>}
         </div>
+        <ThemePickerTrigger
+          preset={lightPreset}
+          themes={getLightThemes()}
+          selectedId={lightTheme}
+          onSelect={setLightTheme}
+        />
       </div>
     </div>
   )
 }
 
-function ThemePreviewCard({
+function ThemePickerTrigger({
+  preset,
+  themes,
+  selectedId,
+  onSelect
+}: {
+  preset: ThemePreset | undefined
+  themes: ThemePreset[]
+  selectedId: string
+  onSelect: (id: string) => void
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, right: 0 })
+
+  useEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPos({
+        top: rect.bottom + 6,
+        right: window.innerWidth - rect.right
+      })
+    }
+  }, [open])
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent): void => {
+      if (
+        popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const c = preset?.colors
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '5px 10px',
+          borderRadius: 6,
+          border: '1px solid var(--border)',
+          backgroundColor: 'var(--bg-surface)',
+          cursor: 'pointer',
+          color: 'var(--text-primary)',
+          fontSize: 12,
+          fontWeight: 500
+        }}
+      >
+        {/* Color dots preview */}
+        {c && (
+          <div style={{ display: 'flex', gap: 2 }}>
+            {[c['--bg-primary'], c['--accent'], c['--term-green'], c['--term-red']].map((color, i) => (
+              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, border: '1px solid var(--border)' }} />
+            ))}
+          </div>
+        )}
+        <span>{preset?.name ?? selectedId}</span>
+        {/* Chevron */}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={popoverRef}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            right: pos.right,
+            zIndex: 500,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 8,
+            padding: 8,
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            backgroundColor: 'var(--bg-surface)',
+            boxShadow: 'var(--shadow-lg)'
+          }}
+        >
+          {themes.map((t) => (
+            <MiniThemeCard
+              key={t.id}
+              preset={t}
+              selected={selectedId === t.id}
+              onClick={() => {
+                onSelect(t.id)
+                setOpen(false)
+              }}
+            />
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  )
+}
+
+function MiniThemeCard({
   preset,
   selected,
   onClick
@@ -110,116 +226,51 @@ function ThemePreviewCard({
         display: 'flex',
         flexDirection: 'column',
         border: selected ? `2px solid ${c['--accent']}` : '2px solid transparent',
-        borderRadius: 8,
+        borderRadius: 6,
         overflow: 'hidden',
         cursor: 'pointer',
         background: c['--bg-primary'],
         padding: 0,
         textAlign: 'left',
         transition: 'border-color 0.15s ease',
-        outline: 'none'
+        outline: 'none',
+        width: 180
       }}
     >
-      {/* Mini task card preview */}
+      {/* Compact terminal preview */}
       <div style={{
-        padding: '10px 12px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        borderBottom: `1px solid ${c['--border']}`
-      }}>
-        {/* Task card row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {/* Status circle */}
-          <div style={{
-            width: 8, height: 8, borderRadius: '50%',
-            border: `1.5px solid ${c['--status-in-progress']}`,
-            flexShrink: 0
-          }} />
-          <span style={{
-            fontSize: 11, fontWeight: 500,
-            color: c['--text-primary'],
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-          }}>
-            Build auth module
-          </span>
-        </div>
-        {/* Labels and badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-          <span style={{
-            fontSize: 9, padding: '1px 5px', borderRadius: 3,
-            backgroundColor: c['--accent-subtle'], color: c['--accent'],
-            fontWeight: 500
-          }}>
-            feature
-          </span>
-          <span style={{
-            fontSize: 9, padding: '1px 5px', borderRadius: 3,
-            backgroundColor: c['--overlay-subtle'], color: c['--text-secondary'],
-            fontWeight: 500
-          }}>
-            In Progress
-          </span>
-          {/* Agent status dot */}
-          <div style={{
-            width: 5, height: 5, borderRadius: '50%',
-            backgroundColor: c['--agent-running'],
-            marginLeft: 'auto'
-          }} />
-        </div>
-      </div>
-
-      {/* Mini terminal preview */}
-      <div style={{
-        padding: '8px 10px',
+        padding: '6px 8px',
         fontFamily: "'SF Mono', 'Fira Code', monospace",
-        fontSize: 9,
-        lineHeight: 1.5,
+        fontSize: 8,
+        lineHeight: 1.4,
         backgroundColor: c['--bg-primary'],
         display: 'flex',
         flexDirection: 'column',
-        gap: 1,
-        borderBottom: `1px solid ${c['--border']}`
+        gap: 0
       }}>
         <div>
           <span style={{ color: c['--term-green'] }}>$</span>
           <span style={{ color: c['--text-primary'] }}> npm test</span>
         </div>
-        <div style={{ color: c['--term-green'] }}>PASS src/auth.test.ts</div>
-        <div style={{ color: c['--term-red'] }}>FAIL src/db.test.ts</div>
-        <div style={{ color: c['--term-yellow'] }}>warn: retry limit</div>
+        <div style={{ color: c['--term-green'] }}>PASS auth.test</div>
+        <div style={{ color: c['--term-red'] }}>FAIL db.test</div>
       </div>
 
-      {/* Footer: theme name + color dots */}
+      {/* Footer: name + color dots */}
       <div style={{
-        padding: '8px 12px',
+        padding: '5px 8px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: c['--bg-surface']
+        backgroundColor: c['--bg-surface'],
+        borderTop: `1px solid ${c['--border']}`
       }}>
-        <span style={{
-          fontSize: 11, fontWeight: 500,
-          color: c['--text-primary']
-        }}>
+        <span style={{ fontSize: 10, fontWeight: 500, color: c['--text-primary'] }}>
           {preset.name}
         </span>
-        <div style={{ display: 'flex', gap: 3 }}>
-          {[
-            c['--accent'],
-            c['--term-red'],
-            c['--term-green'],
-            c['--term-yellow'],
-            c['--term-magenta'],
-            c['--term-cyan']
-          ].map((color, i) => (
-            <div
-              key={i}
-              style={{
-                width: 8, height: 8, borderRadius: '50%',
-                backgroundColor: color
-              }}
-            />
+        <div style={{ display: 'flex', gap: 2 }}>
+          {[c['--accent'], c['--term-red'], c['--term-green'], c['--term-yellow'], c['--term-cyan']].map((color, i) => (
+            <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color }} />
           ))}
         </div>
       </div>
@@ -230,15 +281,13 @@ function ThemePreviewCard({
 const labelStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 500,
-  color: 'var(--text-primary)',
-  marginBottom: 8
+  color: 'var(--text-primary)'
 }
 
-const subtitleStyle: React.CSSProperties = {
+const descStyle: React.CSSProperties = {
   fontSize: 11,
   color: 'var(--text-tertiary)',
-  marginBottom: 8,
-  marginTop: -4
+  marginTop: 2
 }
 
 const segmentedControlContainer: React.CSSProperties = {
@@ -246,12 +295,13 @@ const segmentedControlContainer: React.CSSProperties = {
   borderRadius: 6,
   border: '1px solid var(--border)',
   overflow: 'hidden',
-  backgroundColor: 'var(--bg-surface)'
+  backgroundColor: 'var(--bg-surface)',
+  flexShrink: 0
 }
 
 const segmentedBase: React.CSSProperties = {
-  padding: '6px 16px',
-  fontSize: 12,
+  padding: '5px 12px',
+  fontSize: 11,
   fontWeight: 500,
   cursor: 'pointer',
   border: 'none',
@@ -270,10 +320,4 @@ const segmentedActive: React.CSSProperties = {
   ...segmentedBase,
   backgroundColor: 'var(--accent)',
   color: '#ffffff'
-}
-
-const gridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, 1fr)',
-  gap: 12
 }
