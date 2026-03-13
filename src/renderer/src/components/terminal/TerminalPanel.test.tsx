@@ -326,6 +326,32 @@ describe('TerminalPanel', () => {
     expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
   })
 
+  it('updates snippets when snippets-updated event is dispatched', async () => {
+    await renderActive()
+
+    // Verify initial snippets
+    expect(screen.getByText('Start')).toBeInTheDocument()
+    expect(screen.getByText('Test')).toBeInTheDocument()
+
+    // Dispatch snippets-updated event with new snippets
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('snippets-updated', {
+          detail: [
+            { title: 'Deploy', command: 'npm run deploy', pressEnter: true },
+            { title: 'Lint', command: 'npm run lint', pressEnter: false }
+          ]
+        })
+      )
+    })
+
+    // Should show updated snippets
+    expect(screen.getByText('Deploy')).toBeInTheDocument()
+    expect(screen.getByText('Lint')).toBeInTheDocument()
+    expect(screen.queryByText('Start')).not.toBeInTheDocument()
+    expect(screen.queryByText('Test')).not.toBeInTheDocument()
+  })
+
   it('does NOT reset agentStatus to idle on stop when agent is done', async () => {
     const task = makeTask({ agentStatus: 'done' })
     useTaskStore.setState({

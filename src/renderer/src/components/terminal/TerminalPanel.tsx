@@ -70,7 +70,7 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
     }
   }, [taskId, createSession, isArchived])
 
-  // Load snippets from settings
+  // Load snippets from settings and listen for updates
   useEffect(() => {
     async function loadSnippets(): Promise<void> {
       try {
@@ -83,6 +83,14 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
       }
     }
     loadSnippets()
+
+    // Re-load when snippets are saved from the settings modal
+    function handleSnippetsUpdated(e: Event): void {
+      const detail = (e as CustomEvent<Snippet[]>).detail
+      setSnippets(detail.length > 0 ? detail : DEFAULT_SNIPPETS)
+    }
+    window.addEventListener('snippets-updated', handleSnippetsUpdated)
+    return () => window.removeEventListener('snippets-updated', handleSnippetsUpdated)
   }, [])
 
   const handleSnippet = useCallback(
