@@ -23,8 +23,7 @@ export function useGlobalShortcuts(): void {
   const closeShortcutsModal = useUIStore((s) => s.closeShortcutsModal)
   const addTask = useTaskStore((s) => s.addTask)
   const projectState = useTaskStore((s) => s.projectState)
-  const toggleProjectSidebar = useWorkspaceStore((s) => s.toggleSidebar)
-  const projectSidebarVisible = useWorkspaceStore((s) => s.sidebarVisible)
+  const toggleSidebarVisible = useWorkspaceStore((s) => s.toggleSidebarVisible)
 
   const isInputFocused = useCallback((): boolean => {
     const target = document.activeElement as HTMLElement | null
@@ -76,10 +75,10 @@ export function useGlobalShortcuts(): void {
         return
       }
 
-      // Cmd+B — toggle project sidebar (only when 2+ projects open)
-      if (meta && e.key === 'b' && projectSidebarVisible) {
+      // Cmd+B — toggle project sidebar visibility
+      if (meta && e.key === 'b') {
         e.preventDefault()
-        toggleProjectSidebar()
+        toggleSidebarVisible()
         return
       }
 
@@ -158,7 +157,6 @@ export function useGlobalShortcuts(): void {
     addTask,
     projectState,
     isInputFocused,
-    toggleProjectSidebar,
-    projectSidebarVisible
+    toggleSidebarVisible
   ])
 }

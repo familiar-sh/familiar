@@ -32,6 +32,7 @@ interface WorkspaceState {
   addProject: () => Promise<string | null>
   removeProject: (path: string) => Promise<void>
   toggleSidebar: () => void
+  toggleSidebarVisible: () => void
   setSidebarExpanded: (expanded: boolean) => void
   setShowWorkspacePicker: (show: boolean) => void
 
@@ -69,11 +70,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       path: p,
       name: getProjectName(p)
     }))
-    set({
+    set((s) => ({
       openProjects,
       activeProjectPath,
-      sidebarVisible: openProjects.length >= 2
-    })
+      // Auto-show sidebar when multiple projects are open, but never auto-hide
+      sidebarVisible: s.sidebarVisible || openProjects.length >= 2
+    }))
   },
 
   openWorkspace: async (workspaceId: string): Promise<void> => {
@@ -130,6 +132,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   toggleSidebar: (): void => {
     set((s) => ({ sidebarExpanded: !s.sidebarExpanded }))
+  },
+
+  toggleSidebarVisible: (): void => {
+    set((s) => ({ sidebarVisible: !s.sidebarVisible }))
   },
 
   setSidebarExpanded: (expanded: boolean): void => {

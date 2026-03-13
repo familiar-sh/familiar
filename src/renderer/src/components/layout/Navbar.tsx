@@ -35,6 +35,9 @@ export function Navbar(): React.JSX.Element {
     })
   }, [projectState, activeProjectPath])
 
+  const sidebarVisible = useWorkspaceStore((s) => s.sidebarVisible)
+  const toggleSidebarVisible = useWorkspaceStore((s) => s.toggleSidebarVisible)
+
   const projectName = workspaceProjectName ?? folderName ?? projectState?.projectName ?? APP_NAME
   const taskDetailOpen = useUIStore((s) => s.taskDetailOpen)
   const closeTaskDetail = useUIStore((s) => s.closeTaskDetail)
@@ -163,6 +166,20 @@ export function Navbar(): React.JSX.Element {
               strokeWidth="1.5"
               strokeLinejoin="round"
             />
+          </svg>
+        </button>
+
+        {/* Toggle project sidebar */}
+        <button
+          className={`${styles.navButton} ${sidebarVisible ? styles.navButtonActive : ''}`}
+          onClick={toggleSidebarVisible}
+          title="Projects (⌘B)"
+          data-testid="sidebar-toggle-nav"
+        >
+          {/* Sidebar/panel-left icon */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1.5" y="2" width="13" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+            <line x1="5.5" y1="2" x2="5.5" y2="14" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </button>
 
