@@ -111,9 +111,9 @@ describe('useUIStore', () => {
   })
 
   describe('setEditorPanelWidth', () => {
-    it('clamps to minimum 200px', () => {
+    it('clamps to minimum 300px', () => {
       useUIStore.getState().setEditorPanelWidth(50)
-      expect(useUIStore.getState().editorPanelWidth).toBe(200)
+      expect(useUIStore.getState().editorPanelWidth).toBe(300)
     })
 
     it('clamps to maximum 800px', () => {

@@ -11,13 +11,13 @@ describe('SplitPanel', () => {
     expect(getByText('Right Content')).toBeDefined()
   })
 
-  it('applies default left width of 400px capped at 50%', () => {
+  it('applies default left width of 400px capped at 45%', () => {
     const { getByTestId } = render(
       <SplitPanel left={<div>L</div>} right={<div>R</div>} />
     )
     const leftPanel = getByTestId('split-left')
     expect(leftPanel.style.width).toBe('400px')
-    expect(leftPanel.style.maxWidth).toBe('50%')
+    expect(leftPanel.style.maxWidth).toBe('45%')
   })
 
   it('applies custom default left width', () => {
@@ -26,7 +26,7 @@ describe('SplitPanel', () => {
     )
     const leftPanel = getByTestId('split-left')
     expect(leftPanel.style.width).toBe('300px')
-    expect(leftPanel.style.maxWidth).toBe('50%')
+    expect(leftPanel.style.maxWidth).toBe('45%')
   })
 
   it('renders the drag handle with separator role', () => {
