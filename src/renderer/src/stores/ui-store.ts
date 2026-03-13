@@ -31,9 +31,6 @@ interface UIState {
   // Keyboard shortcuts modal
   shortcutsModalOpen: boolean
 
-  // About modal
-  aboutModalOpen: boolean
-
   // Onboarding wizard (can be re-triggered from help menu)
   onboardingOpen: boolean
 
@@ -64,8 +61,6 @@ interface UIState {
   closeCreateTaskModal: () => void
   openShortcutsModal: () => void
   closeShortcutsModal: () => void
-  openAboutModal: () => void
-  closeAboutModal: () => void
   openOnboarding: () => void
   closeOnboarding: () => void
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void
@@ -113,9 +108,6 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Keyboard shortcuts modal
   shortcutsModalOpen: false,
-
-  // About modal
-  aboutModalOpen: false,
 
   // Onboarding
   onboardingOpen: false,
@@ -184,12 +176,6 @@ export const useUIStore = create<UIState>((set) => ({
 
   closeShortcutsModal: () =>
     set({ shortcutsModalOpen: false }),
-
-  openAboutModal: () =>
-    set({ aboutModalOpen: true }),
-
-  closeAboutModal: () =>
-    set({ aboutModalOpen: false }),
 
   openOnboarding: () =>
     set({ onboardingOpen: true, taskDetailOpen: false, settingsOpen: false, commandPaletteOpen: false }),
