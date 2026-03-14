@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { onFileChange } from '@renderer/lib/file-change-hub'
 import styles from './TaskFiles.module.css'
 
 interface TaskFileEntry {
@@ -83,10 +84,9 @@ export function TaskFiles({ taskId }: TaskFilesProps): React.JSX.Element {
 
   // Reload when filesystem changes
   useEffect(() => {
-    const unsub = window.api.watchProjectDir(() => {
+    return onFileChange(() => {
       loadFiles()
     })
-    return unsub
   }, [loadFiles])
 
   const handleOpenFolder = useCallback(async () => {

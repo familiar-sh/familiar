@@ -261,4 +261,57 @@ describe('health-handlers', () => {
       expect(result.failed).toEqual([])
     })
   })
+
+  describe('health:check-hooks', () => {
+    it('registers the handler', () => {
+      expect(handlers.has('health:check-hooks')).toBe(true)
+    })
+
+    it('checks hooks for given project root directly', async () => {
+      mockExistsSync.mockReturnValue(false)
+      const handler = handlers.get('health:check-hooks')!
+      const result = handler({}, '/some/project') as boolean
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('health:check-skill', () => {
+    it('registers the handler', () => {
+      expect(handlers.has('health:check-skill')).toBe(true)
+    })
+
+    it('checks skill for given project root directly', async () => {
+      mockExistsSync.mockReturnValue(false)
+      const handler = handlers.get('health:check-skill')!
+      const result = handler({}, '/some/project') as boolean
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('health:fix-for-project', () => {
+    it('registers the handler', () => {
+      expect(handlers.has('health:fix-for-project')).toBe(true)
+    })
+
+    it('fixes hooks for given project root', async () => {
+      mockExistsSync.mockReturnValue(false)
+      const handler = handlers.get('health:fix-for-project')!
+      const result = handler({}, '/some/project', 'hooks-not-configured') as { success: boolean }
+      expect(result.success).toBe(true)
+      expect(mockMkdirSync).toHaveBeenCalled()
+    })
+
+    it('fixes skill for given project root', async () => {
+      mockExistsSync.mockReturnValue(false)
+      const handler = handlers.get('health:fix-for-project')!
+      const result = handler({}, '/some/project', 'skill-not-installed') as { success: boolean }
+      expect(result.success).toBe(true)
+    })
+
+    it('returns error for unknown issue', async () => {
+      const handler = handlers.get('health:fix-for-project')!
+      const result = handler({}, '/some/project', 'unknown') as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+    })
+  })
 })

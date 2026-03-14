@@ -64,7 +64,10 @@ const mockApi = {
   ptyDestroy: vi.fn().mockResolvedValue(undefined),
   onPtyData: vi.fn().mockReturnValue(() => {}),
   healthCheck: vi.fn().mockResolvedValue({ hooksConfigured: true, skillInstalled: true }),
-  healthFix: vi.fn().mockResolvedValue({ success: true })
+  healthFix: vi.fn().mockResolvedValue({ success: true }),
+  healthCheckHooks: vi.fn().mockResolvedValue(true),
+  healthCheckSkill: vi.fn().mockResolvedValue(true),
+  healthFixForProject: vi.fn().mockResolvedValue({ success: true })
 }
 
 ;(window as any).api = mockApi
@@ -424,8 +427,9 @@ describe('Onboarding', () => {
     expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
   })
 
-  it('shows hooks configured when health check reports true', async () => {
-    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: true, skillInstalled: true })
+  it('shows hooks configured when check reports true', async () => {
+    mockApi.healthCheckHooks.mockResolvedValue(true)
+    mockApi.healthCheckSkill.mockResolvedValue(true)
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => {
@@ -434,7 +438,8 @@ describe('Onboarding', () => {
   })
 
   it('shows hooks not configured with fix button', async () => {
-    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: false, skillInstalled: true })
+    mockApi.healthCheckHooks.mockResolvedValue(false)
+    mockApi.healthCheckSkill.mockResolvedValue(true)
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => {
@@ -443,23 +448,25 @@ describe('Onboarding', () => {
     })
   })
 
-  it('calls healthFix when Install Hooks is clicked', async () => {
-    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: false, skillInstalled: true })
-    mockApi.healthFix.mockResolvedValue({ success: true })
+  it('calls healthFixForProject when Install Hooks is clicked', async () => {
+    mockApi.healthCheckHooks.mockResolvedValue(false)
+    mockApi.healthCheckSkill.mockResolvedValue(true)
+    mockApi.healthFixForProject.mockResolvedValue({ success: true })
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => screen.getByText('Install Hooks'))
     fireEvent.click(screen.getByText('Install Hooks'))
     await waitFor(() => {
-      expect(mockApi.healthFix).toHaveBeenCalledWith('hooks-not-configured')
+      expect(mockApi.healthFixForProject).toHaveBeenCalledWith('/test/project', 'hooks-not-configured')
     })
     await waitFor(() => {
       expect(screen.getByText('Lifecycle hooks are configured')).toBeInTheDocument()
     })
   })
 
-  it('shows skill installed when health check reports true', async () => {
-    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: true, skillInstalled: true })
+  it('shows skill installed when check reports true', async () => {
+    mockApi.healthCheckHooks.mockResolvedValue(true)
+    mockApi.healthCheckSkill.mockResolvedValue(true)
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => {
@@ -468,7 +475,8 @@ describe('Onboarding', () => {
   })
 
   it('shows skill not installed with fix button', async () => {
-    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: true, skillInstalled: false })
+    mockApi.healthCheckHooks.mockResolvedValue(true)
+    mockApi.healthCheckSkill.mockResolvedValue(false)
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => {
@@ -477,15 +485,16 @@ describe('Onboarding', () => {
     })
   })
 
-  it('calls healthFix when Install Skill is clicked', async () => {
-    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: true, skillInstalled: false })
-    mockApi.healthFix.mockResolvedValue({ success: true })
+  it('calls healthFixForProject when Install Skill is clicked', async () => {
+    mockApi.healthCheckHooks.mockResolvedValue(true)
+    mockApi.healthCheckSkill.mockResolvedValue(false)
+    mockApi.healthFixForProject.mockResolvedValue({ success: true })
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => screen.getByText('Install Skill'))
     fireEvent.click(screen.getByText('Install Skill'))
     await waitFor(() => {
-      expect(mockApi.healthFix).toHaveBeenCalledWith('skill-not-installed')
+      expect(mockApi.healthFixForProject).toHaveBeenCalledWith('/test/project', 'skill-not-installed')
     })
     await waitFor(() => {
       expect(screen.getByText('Familiar agent skill is installed')).toBeInTheDocument()
@@ -500,7 +509,8 @@ describe('Onboarding', () => {
     })
     expect(screen.queryByText('Agent Hooks')).not.toBeInTheDocument()
     expect(screen.queryByText('Agent Skill')).not.toBeInTheDocument()
-    expect(mockApi.healthCheck).not.toHaveBeenCalled()
+    expect(mockApi.healthCheckHooks).not.toHaveBeenCalled()
+    expect(mockApi.healthCheckSkill).not.toHaveBeenCalled()
   })
 })
 

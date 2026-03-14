@@ -58,7 +58,7 @@ async function checkClaudeAvailable(): Promise<boolean> {
   }
 }
 
-function checkHooksConfigured(projectRoot: string): boolean {
+export function checkHooksConfigured(projectRoot: string): boolean {
   const settingsPath = join(projectRoot, '.claude', 'settings.json')
   const onPromptSubmit = join(projectRoot, '.claude', 'hooks', 'on-prompt-submit.sh')
   const onStop = join(projectRoot, '.claude', 'hooks', 'on-stop.sh')
@@ -87,12 +87,12 @@ function checkHooksConfigured(projectRoot: string): boolean {
   return true
 }
 
-function checkSkillInstalled(projectRoot: string): boolean {
+export function checkSkillInstalled(projectRoot: string): boolean {
   const skillPath = join(projectRoot, '.claude', 'skills', 'familiar-agent', 'SKILL.md')
   return existsSync(skillPath)
 }
 
-function fixHooks(projectRoot: string): void {
+export function fixHooks(projectRoot: string): void {
   const claudeDir = join(projectRoot, '.claude')
   const hooksDir = join(claudeDir, 'hooks')
   const settingsPath = join(claudeDir, 'settings.json')
@@ -168,7 +168,7 @@ exit 0
   chmodSync(onStop, 0o755)
 }
 
-function fixSkill(projectRoot: string): void {
+export function fixSkill(projectRoot: string): void {
   const skillDir = join(projectRoot, '.claude', 'skills', 'familiar-agent')
 
   if (!existsSync(skillDir)) {
@@ -294,7 +294,7 @@ export function registerHealthHandlers(
   workspaceManager: WorkspaceManager,
   _dataService: DataService
 ): void {
-  ipcMain.handle('health:check', async (): Promise<HealthCheckResult> => {
+  ipcMain.handle('health:check', async (_event, overrideAgent?: string): Promise<HealthCheckResult> => {
     const projectRoot = workspaceManager.getActiveProjectPath()
     if (!projectRoot) {
       return {
@@ -311,6 +311,9 @@ export function registerHealthHandlers(
     const settings = await ds.readSettings()
     const issues: HealthIssue[] = []
 
+    // Use overrideAgent if provided (e.g. during onboarding when settings may not be synced yet)
+    const effectiveAgent = overrideAgent || settings.codingAgent
+
     // 1. Check CLI
     const cliAvailable = await checkCliAvailable()
     if (!cliAvailable) {
@@ -324,7 +327,7 @@ export function registerHealthHandlers(
     }
 
     // 2. Check agent harness
-    const agentHarnessConfigured = !!settings.codingAgent
+    const agentHarnessConfigured = !!effectiveAgent
     if (!agentHarnessConfigured) {
       issues.push({
         id: 'no-agent-harness',
@@ -340,7 +343,7 @@ export function registerHealthHandlers(
     let hooksConfigured: boolean | null = null
     let skillInstalled: boolean | null = null
 
-    if (settings.codingAgent === 'claude-code') {
+    if (effectiveAgent === 'claude-code') {
       // 3. Check Claude Code binary
       claudeAvailable = await checkClaudeAvailable()
       if (!claudeAvailable) {
@@ -456,6 +459,42 @@ export function registerHealthHandlers(
       }
 
       return { fixed, failed }
+    }
+  )
+
+  // Direct check/fix methods that take an explicit project root
+  // Used by onboarding which may not have a synced active project
+  ipcMain.handle(
+    'health:check-hooks',
+    (_event, projectRoot: string): boolean => {
+      return checkHooksConfigured(projectRoot)
+    }
+  )
+
+  ipcMain.handle(
+    'health:check-skill',
+    (_event, projectRoot: string): boolean => {
+      return checkSkillInstalled(projectRoot)
+    }
+  )
+
+  ipcMain.handle(
+    'health:fix-for-project',
+    (_event, projectRoot: string, issueId: string): { success: boolean; error?: string } => {
+      try {
+        switch (issueId) {
+          case 'hooks-not-configured':
+            fixHooks(projectRoot)
+            return { success: true }
+          case 'skill-not-installed':
+            fixSkill(projectRoot)
+            return { success: true }
+          default:
+            return { success: false, error: `Unknown issue: ${issueId}` }
+        }
+      } catch (err) {
+        return { success: false, error: (err as Error).message }
+      }
     }
   )
 }

@@ -45,15 +45,14 @@ describe('Claude Code hooks', () => {
       expect(content).toContain('-n "$FAMILIAR_TASK_ID"')
     })
 
-    it('sets agent status to idle', async () => {
+    it('sets agent status to done', async () => {
       const content = await fs.readFile(path.join(HOOKS_DIR, 'on-stop.sh'), 'utf-8')
-      expect(content).toContain('--agent-status idle')
+      expect(content).toContain('--agent-status done')
     })
 
-    it('does NOT change task status', async () => {
+    it('moves task to in-review', async () => {
       const content = await fs.readFile(path.join(HOOKS_DIR, 'on-stop.sh'), 'utf-8')
-      // Should not contain 'familiar status' which changes task status
-      expect(content).not.toContain('familiar status')
+      expect(content).toContain('familiar status "$FAMILIAR_TASK_ID" in-review')
     })
 
     it('sends a notification that the agent stopped', async () => {

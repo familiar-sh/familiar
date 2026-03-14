@@ -165,18 +165,24 @@ const api = {
     ipcRenderer.invoke('claude:check-available'),
 
   // Health checks
-  healthCheck: (): Promise<{
+  healthCheck: (overrideAgent?: string): Promise<{
     issues: { id: string; severity: 'error' | 'warning'; title: string; description: string; fixable: boolean }[]
     cliAvailable: boolean
     agentHarnessConfigured: boolean
     claudeAvailable: boolean | null
     hooksConfigured: boolean | null
     skillInstalled: boolean | null
-  }> => ipcRenderer.invoke('health:check'),
+  }> => ipcRenderer.invoke('health:check', overrideAgent),
   healthFix: (issueId: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('health:fix', issueId),
   healthFixAll: (): Promise<{ fixed: string[]; failed: string[] }> =>
     ipcRenderer.invoke('health:fix-all'),
+  healthCheckHooks: (projectRoot: string): Promise<boolean> =>
+    ipcRenderer.invoke('health:check-hooks', projectRoot),
+  healthCheckSkill: (projectRoot: string): Promise<boolean> =>
+    ipcRenderer.invoke('health:check-skill', projectRoot),
+  healthFixForProject: (projectRoot: string, issueId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('health:fix-for-project', projectRoot, issueId),
 
   // Shell
   openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:open-path', path),

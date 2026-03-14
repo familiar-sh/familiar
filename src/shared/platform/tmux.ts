@@ -12,4 +12,5 @@ export interface ITmuxManager {
   hasSession(sessionName: string): Promise<boolean>
   getSessionName(taskId: string, paneIndex: number): string
   sendKeys(sessionName: string, keys: string, pressEnter?: boolean): Promise<void>
+  warmupSession(sessionName: string, env?: Record<string, string>, command?: string): Promise<void>
 }

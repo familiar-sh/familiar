@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { LabelConfig } from '@shared/types'
 import { DEFAULT_LABELS } from '@shared/constants'
+import { onFileChange } from '@renderer/lib/file-change-hub'
 
 /**
  * Loads project labels from settings and listens for updates.
@@ -33,7 +34,7 @@ export function useProjectLabels(): LabelConfig[] {
     window.addEventListener('labels-updated', handleLabelsUpdated)
 
     // Re-fetch when any .familiar/ file changes (e.g. CLI edits settings.json)
-    const unwatch = window.api.watchProjectDir(() => {
+    const unwatch = onFileChange(() => {
       load()
     })
 

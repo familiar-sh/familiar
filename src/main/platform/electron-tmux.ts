@@ -76,6 +76,10 @@ export class ElectronTmuxManager implements ITmuxManager {
     }
   }
 
+  private _delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
   async createSession(sessionName: string, cwd: string, env?: Record<string, string>): Promise<void> {
     await this._exec(['new-session', '-d', '-s', sessionName, '-c', cwd])
 
@@ -83,28 +87,50 @@ export class ElectronTmuxManager implements ITmuxManager {
     // "always" sends unconditionally without the inner app needing to request them.
     await this._execTmux(['set-option', '-t', sessionName, '-s', 'extended-keys', 'always'])
 
-    // Inject environment variables into the running shell and the session
+    // Register env vars at the tmux session level (available to new windows/panes)
     if (env) {
       for (const [key, value] of Object.entries(env)) {
-        // set-environment makes it available to new windows/panes
         await this._execTmux(['set-environment', '-t', sessionName, key, value])
-        // send-keys exports it into the already-running shell
+      }
+    }
+  }
+
+  /**
+   * Dismiss any interactive prompts (e.g. oh-my-zsh update) with Ctrl-C,
+   * then export env vars into the running shell and run a command.
+   * Designed to be called fire-and-forget after the PTY is already attached.
+   */
+  async warmupSession(
+    sessionName: string,
+    env?: Record<string, string>,
+    command?: string
+  ): Promise<void> {
+    // Send Ctrl-C 3 times with 1s intervals to dismiss interactive prompts
+    for (let i = 0; i < 3; i++) {
+      await this._execTmux(['send-keys', '-t', sessionName, 'C-c'])
+      await this._delay(1000)
+    }
+
+    // Export env vars into the running shell
+    if (env) {
+      for (const [key, value] of Object.entries(env)) {
         await this._exec(['send-keys', '-t', sessionName, `export ${key}="${value}"`, 'Enter'])
       }
-      // Clear the screen so the export commands aren't visible
-      await this._exec(['send-keys', '-t', sessionName, 'clear', 'Enter'])
+    }
+
+    // Clear the screen
+    await this._exec(['send-keys', '-t', sessionName, 'clear', 'Enter'])
+
+    // Run the initial command if provided
+    if (command) {
+      await this._exec(['send-keys', '-t', sessionName, command, 'Enter'])
     }
   }
 
   async setEnvironment(sessionName: string, env: Record<string, string>): Promise<void> {
     for (const [key, value] of Object.entries(env)) {
-      // set-environment makes it available to new windows/panes
       await this._execTmux(['set-environment', '-t', sessionName, key, value])
-      // send-keys exports it into the already-running shell
-      await this._exec(['send-keys', '-t', sessionName, `export ${key}="${value}"`, 'Enter'])
     }
-    // Clear the screen so the export commands aren't visible
-    await this._exec(['send-keys', '-t', sessionName, 'clear', 'Enter'])
   }
 
   async attachSession(_sessionName: string): Promise<void> {

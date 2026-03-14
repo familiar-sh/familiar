@@ -99,7 +99,7 @@ declare global {
       claudeCheckAvailable(): Promise<{ available: boolean; path: string | null; version: string | null }>
 
       // Health checks
-      healthCheck(): Promise<{
+      healthCheck(overrideAgent?: string): Promise<{
         issues: { id: string; severity: 'error' | 'warning'; title: string; description: string; fixable: boolean }[]
         cliAvailable: boolean
         agentHarnessConfigured: boolean
@@ -109,6 +109,9 @@ declare global {
       }>
       healthFix(issueId: string): Promise<{ success: boolean; error?: string }>
       healthFixAll(): Promise<{ fixed: string[]; failed: string[] }>
+      healthCheckHooks(projectRoot: string): Promise<boolean>
+      healthCheckSkill(projectRoot: string): Promise<boolean>
+      healthFixForProject(projectRoot: string, issueId: string): Promise<{ success: boolean; error?: string }>
 
       // Shell
       openPath(path: string): Promise<string>
