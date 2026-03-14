@@ -2,10 +2,9 @@ import { create } from 'zustand'
 import type { ProjectState, Task, TaskStatus, Priority, LabelConfig, ActivityEntry } from '@shared/types'
 import { useNotificationStore } from './notification-store'
 
-// Monotonically increasing generation counter for loadProjectState().
-// Each call increments this, and only the latest call's result is applied.
-// This prevents stale file-watcher-triggered reloads from overwriting
-// a more recent project switch's data.
+// Generation counter for loadProjectState(). Only the most recent call
+// applies its result. This prevents file-watcher reloads from overwriting
+// data loaded during a deliberate project switch.
 let loadGeneration = 0
 
 interface TaskStore {

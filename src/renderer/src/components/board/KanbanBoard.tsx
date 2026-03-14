@@ -31,7 +31,7 @@ import { Onboarding } from '@renderer/components/onboarding'
 import { KanbanColumn } from './KanbanColumn'
 import type { PendingImage, PendingPastedFile } from '@renderer/components/common/CreateTaskInput'
 import { TaskCardOverlay } from './TaskCard'
-import { CliSetupBanner } from './CliSetupBanner'
+import { WorkspaceHealthBanner } from './WorkspaceHealthBanner'
 import styles from './KanbanBoard.module.css'
 
 export interface DropIndicator {
@@ -70,7 +70,14 @@ export function KanbanBoard(): React.JSX.Element {
       setNeedsOnboarding(true)
       return
     }
-    // Project is loaded — check if user has explicitly completed onboarding
+    // If the project already has tasks, it's been used — skip onboarding.
+    // This prevents onboarding from blocking the dashboard when switching
+    // to a project in a workspace that was configured outside Familiar.
+    if (projectState.tasks.length > 0) {
+      setNeedsOnboarding(false)
+      return
+    }
+    // Empty project — check if user has explicitly completed onboarding
     // (both codingAgent set AND skipDoctor explicitly chosen)
     window.api
       .readSettings()
@@ -569,7 +576,7 @@ export function KanbanBoard(): React.JSX.Element {
 
   return (
     <div className={styles.boardWrapper}>
-      <CliSetupBanner />
+      <WorkspaceHealthBanner />
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
