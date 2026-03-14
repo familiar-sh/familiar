@@ -77,6 +77,8 @@
 }
 
 .createWidget:focus-within {
+  border-top-color: var(--accent);
+  border-bottom-color: var(--accent);
   background-color: var(--bg-elevated);
 }
 
