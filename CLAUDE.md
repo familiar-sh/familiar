@@ -161,7 +161,7 @@ Task status and agent status are independent. Here is every trigger that changes
 | Trigger | Task Status | Agent Status | Notification |
 |---------|-------------|-------------|-------------|
 | **User sends message** (hook: `on-prompt-submit.sh`) | → `in-progress` | → `running` | — |
-| **Claude stops responding** (hook: `on-stop.sh`) | *(unchanged)* | → `idle` | "Agent Stopped" |
+| **Claude stops responding** (hook: `on-stop.sh`) | → `in-review` | → `done` | "Agent Stopped" |
 | **Agent completes — needs review** (CLI) | → `in-review` | → `done` | — |
 | **Agent completes — no review** (CLI) | *(unchanged)* | → `done` | — |
 | **Agent fails** (CLI) | *(unchanged)* | → `error` | — |
