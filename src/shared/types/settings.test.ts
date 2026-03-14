@@ -9,6 +9,10 @@ describe('ProjectSettings', () => {
     expect(DEFAULT_SETTINGS.lightTheme).toBe('familiar-light')
   })
 
+  it('DEFAULT_SETTINGS has simplifyTaskTitles enabled by default', () => {
+    expect(DEFAULT_SETTINGS.simplifyTaskTitles).toBe(true)
+  })
+
   it('allows all three theme modes', () => {
     const settings: ProjectSettings = {
       ...DEFAULT_SETTINGS,

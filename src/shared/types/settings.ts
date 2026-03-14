@@ -51,6 +51,7 @@ export const DEFAULT_SETTINGS: ProjectSettings = {
   defaultCommand:
     'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID',
   snippets: DEFAULT_SNIPPETS,
+  simplifyTaskTitles: true,
   labels: undefined, // Populated from DEFAULT_LABELS on first load
   themeMode: 'system',
   darkTheme: 'familiar-dark',
