@@ -79,18 +79,38 @@ export function TaskCard({
   const [editTitleValue, setEditTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Column duration — live-updating every minute
-  const [columnDuration, setColumnDuration] = useState<string | null>(() =>
-    task.statusChangedAt ? formatDuration(task.statusChangedAt) : null
+  // Column duration — derive from statusChangedAt, or fall back to activity log
+  const [columnEnteredAt, setColumnEnteredAt] = useState<string | null>(task.statusChangedAt ?? null)
+  useEffect(() => {
+    if (task.statusChangedAt) {
+      setColumnEnteredAt(task.statusChangedAt)
+      return
+    }
+    // Fall back: read activity log for the last status_change entry
+    let cancelled = false
+    window.api.readTaskActivity(task.id).then((entries) => {
+      if (cancelled) return
+      const statusChanges = entries.filter((e) => e.type === 'status_change')
+      const last = statusChanges.length > 0 ? statusChanges[statusChanges.length - 1] : null
+      setColumnEnteredAt(last?.timestamp ?? task.createdAt)
+    }).catch(() => {
+      if (!cancelled) setColumnEnteredAt(task.createdAt)
+    })
+    return () => { cancelled = true }
+  }, [task.id, task.statusChangedAt, task.createdAt])
+
+  // Live-updating duration display
+  const [columnDuration, setColumnDuration] = useState<string | null>(
+    columnEnteredAt ? formatDuration(columnEnteredAt) : null
   )
   useEffect(() => {
-    if (!task.statusChangedAt) { setColumnDuration(null); return }
-    setColumnDuration(formatDuration(task.statusChangedAt))
+    if (!columnEnteredAt) { setColumnDuration(null); return }
+    setColumnDuration(formatDuration(columnEnteredAt))
     const timer = setInterval(() => {
-      setColumnDuration(formatDuration(task.statusChangedAt!))
+      setColumnDuration(formatDuration(columnEnteredAt))
     }, 60_000)
     return () => clearInterval(timer)
-  }, [task.statusChangedAt])
+  }, [columnEnteredAt])
 
   // Last activity for in-progress tasks
   const [lastActivity, setLastActivity] = useState<string | null>(null)
