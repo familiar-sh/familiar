@@ -75,9 +75,17 @@ function App(): React.JSX.Element {
     checkInitialized()
   }, [projectState, activeProjectPath, setShowWorkspacePicker, openOnboarding, closeOnboarding, onboardingOpen])
 
-  // Reload state when external changes are detected (e.g. CLI updates)
+  // Reload state when external changes are detected (e.g. CLI updates).
+  // Only reload when the change is for the active project — file watchers
+  // from non-active projects in a multi-project workspace should not trigger
+  // a reload (they would just re-read the active project's data anyway, and
+  // the overlapping async calls can race with project switches).
   useEffect(() => {
-    return onFileChange(() => {
+    return onFileChange((changedProjectPath) => {
+      const currentActive = useWorkspaceStore.getState().activeProjectPath
+      if (changedProjectPath && currentActive && changedProjectPath !== currentActive) {
+        return // Ignore file changes from non-active projects
+      }
       loadProjectState()
       loadNotifications()
     })

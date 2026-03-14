@@ -2,6 +2,12 @@ import { create } from 'zustand'
 import type { ProjectState, Task, TaskStatus, Priority, LabelConfig, ActivityEntry } from '@shared/types'
 import { useNotificationStore } from './notification-store'
 
+// Monotonically increasing generation counter for loadProjectState().
+// Each call increments this, and only the latest call's result is applied.
+// This prevents stale file-watcher-triggered reloads from overwriting
+// a more recent project switch's data.
+let loadGeneration = 0
+
 interface TaskStore {
   // State
   projectState: ProjectState | null
@@ -71,15 +77,21 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     if (!existing) {
       set({ isLoading: true, error: null })
     }
+    // Capture a generation token so overlapping calls (e.g. file-watcher
+    // reload racing against a project switch) don't overwrite newer data.
+    const gen = ++loadGeneration
     try {
       const initialized = await window.api.isInitialized()
+      if (gen !== loadGeneration) return // superseded by a newer call
       if (!initialized) {
         set({ projectState: null, isLoading: false })
         return
       }
       const state = await window.api.readProjectState()
+      if (gen !== loadGeneration) return // superseded by a newer call
       set({ projectState: state, isLoading: false })
     } catch (err) {
+      if (gen !== loadGeneration) return // superseded by a newer call
       set({ error: (err as Error).message, isLoading: false })
     }
   },
@@ -161,12 +173,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set({ projectState: newState })
 
     // Warm up tmux session for non-archived tasks (fire-and-forget).
-    // Skip warmup for forked tasks — the session file copy must happen
-    // in pty.create() before the tmux session starts, otherwise the warmup
-    // sends --session-id (creating an empty session) before the parent's
-    // session file can be copied.
-    if (task.status !== 'archived' && !task.forkedFrom) {
-      window.api.warmupTmuxSession(task.id).catch(() => {
+    if (task.status !== 'archived') {
+      window.api.warmupTmuxSession(task.id, task.forkedFrom).catch(() => {
         // Warmup failure is non-critical — terminal will create session on open
       })
     }

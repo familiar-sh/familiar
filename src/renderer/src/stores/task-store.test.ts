@@ -147,7 +147,7 @@ describe('useTaskStore', () => {
       mockApi.warmupTmuxSession.mockResolvedValue(undefined)
 
       const task = await useTaskStore.getState().addTask('Test warmup')
-      expect(mockApi.warmupTmuxSession).toHaveBeenCalledWith(task.id)
+      expect(mockApi.warmupTmuxSession).toHaveBeenCalledWith(task.id, undefined)
     })
 
     it('does not call warmupTmuxSession when creating an archived task', async () => {
@@ -984,6 +984,38 @@ describe('useTaskStore', () => {
 
       expect(useTaskStore.getState().projectState).toEqual(newState)
       expect(useTaskStore.getState().isLoading).toBe(false)
+    })
+
+    it('discards stale results when a newer loadProjectState call supersedes', async () => {
+      // Simulate two overlapping loadProjectState calls — the first should
+      // be discarded because the second (newer) call supersedes it.
+      const staleState = makeProjectState([makeTask({ id: 'tsk_stale', title: 'Stale' })])
+      const freshState = makeProjectState([makeTask({ id: 'tsk_fresh', title: 'Fresh' })])
+
+      // First call: will be slow
+      let resolveSlowInit: (v: boolean) => void
+      const slowInitPromise = new Promise<boolean>((r) => { resolveSlowInit = r })
+      mockApi.isInitialized.mockReturnValueOnce(slowInitPromise)
+
+      // Start call 1 (slow)
+      const call1 = useTaskStore.getState().loadProjectState()
+
+      // Start call 2 (fast) — this supersedes call 1
+      mockApi.isInitialized.mockResolvedValueOnce(true)
+      mockApi.readProjectState.mockResolvedValueOnce(freshState)
+      const call2 = useTaskStore.getState().loadProjectState()
+
+      // Let call 2 complete first
+      await call2
+      expect(useTaskStore.getState().projectState).toEqual(freshState)
+
+      // Now let call 1 complete — its result should be discarded
+      mockApi.readProjectState.mockResolvedValueOnce(staleState)
+      resolveSlowInit!(true)
+      await call1
+
+      // Store should still have the fresh state, not the stale one
+      expect(useTaskStore.getState().projectState).toEqual(freshState)
     })
   })
 
