@@ -251,6 +251,38 @@ describe('KanbanBoard', () => {
     expect(useUIStore.getState().pendingDetailFocus).toBe('terminal')
   })
 
+  it('updates displayed tasks when projectState changes (simulates project switch)', async () => {
+    // Render with project A tasks
+    const stateA = makeProjectState([
+      makeTask({ id: 'tsk_a1', title: 'Alpha Task One', status: 'todo' }),
+      makeTask({ id: 'tsk_a2', title: 'Alpha Task Two', status: 'in-progress' })
+    ])
+    stateA.projectName = 'Alpha'
+    useTaskStore.setState({ isLoading: false, projectState: stateA })
+
+    render(<KanbanBoard />)
+    expect(screen.getByText('Alpha Task One')).toBeInTheDocument()
+    expect(screen.getByText('Alpha Task Two')).toBeInTheDocument()
+
+    // Simulate project switch — update store with project B tasks
+    const stateB = makeProjectState([
+      makeTask({ id: 'tsk_b1', title: 'Beta Task One', status: 'todo' }),
+      makeTask({ id: 'tsk_b2', title: 'Beta Task Two', status: 'todo' }),
+      makeTask({ id: 'tsk_b3', title: 'Beta Task Three', status: 'done' })
+    ])
+    stateB.projectName = 'Beta'
+    act(() => {
+      useTaskStore.setState({ projectState: stateB })
+    })
+
+    // Board should now show Beta tasks, NOT Alpha tasks
+    expect(screen.getByText('Beta Task One')).toBeInTheDocument()
+    expect(screen.getByText('Beta Task Two')).toBeInTheDocument()
+    expect(screen.getByText('Beta Task Three')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha Task One')).not.toBeInTheDocument()
+    expect(screen.queryByText('Alpha Task Two')).not.toBeInTheDocument()
+  })
+
   it('dispatches focus-new-task-input when no card is keyboard-focused', async () => {
     vi.useFakeTimers()
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')

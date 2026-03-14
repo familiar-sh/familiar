@@ -14,12 +14,18 @@ export function registerWorkspaceHandlers(
    * the workspace manager's current active project.  Without this, IPC
    * handlers registered with the captured `dataService` would continue to
    * read/write against the previous project's `.familiar/` directory.
+   *
+   * IMPORTANT: We use the active path directly rather than reading from
+   * the DataService object, because the shared `dataService` IS the same
+   * object reference as the workspace manager's map entry for the initial
+   * project. Calling ds.getProjectRoot() on a corrupted entry would
+   * return the wrong path.
    */
   function syncLegacyRefs(): void {
     const activePath = workspaceManager.getActiveProjectPath()
     if (!activePath) return
+    dataService.setProjectRoot(activePath)
     const ds = workspaceManager.getDataService(activePath)
-    dataService.setProjectRoot(ds.getProjectRoot())
     ptyManager.setDataService(ds)
   }
 

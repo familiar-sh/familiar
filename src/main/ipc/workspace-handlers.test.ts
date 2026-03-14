@@ -113,8 +113,8 @@ describe('workspace-handlers', () => {
     const handler = handlers.get('workspace:open')!
     await handler({}, 'ws_1')
     expect(mockManager.openWorkspace).toHaveBeenCalledWith('ws_1')
-    // Should sync shared dataService to match the active project
-    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
+    // Should sync shared dataService to match the active project path directly
+    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/a')
     expect(mockPtyManager.setDataService).toHaveBeenCalled()
   })
 
@@ -123,8 +123,8 @@ describe('workspace-handlers', () => {
     const handler = handlers.get('workspace:open-single')!
     await handler({}, '/tmp/project')
     expect(mockManager.openSingleProject).toHaveBeenCalledWith('/tmp/project')
-    // Should sync shared dataService to match the active project
-    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
+    // Should sync shared dataService to match the active project path directly
+    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/project')
     expect(mockPtyManager.setDataService).toHaveBeenCalled()
   })
 
@@ -139,8 +139,8 @@ describe('workspace-handlers', () => {
     const handler = handlers.get('workspace:remove-project')!
     await handler({}, '/tmp/old-project')
     expect(mockManager.removeProjectFromWorkspace).toHaveBeenCalledWith('/tmp/old-project')
-    // Active project may have changed — sync refs
-    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
+    // Active project may have changed — sync refs using the active path directly
+    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/a')
     expect(mockPtyManager.setDataService).toHaveBeenCalled()
   })
 
@@ -149,6 +149,8 @@ describe('workspace-handlers', () => {
     const handler = handlers.get('workspace:set-active-project')!
     await handler({}, '/tmp/target')
     expect(mockManager.setActiveProjectPath).toHaveBeenCalledWith('/tmp/target')
+    // Uses the active path directly (not ds.getProjectRoot()) to avoid
+    // corrupting the workspace manager's internal DataService map entry
     expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
     expect(mockPtyManager.setDataService).toHaveBeenCalled()
   })
