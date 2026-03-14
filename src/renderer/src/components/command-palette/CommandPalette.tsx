@@ -1,8 +1,8 @@
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { Command } from 'cmdk'
 import { useUIStore } from '../../stores/ui-store'
 import { useTaskStore } from '../../stores/task-store'
-import type { TaskStatus } from '@shared/types'
+import type { TaskStatus, ProjectSettings } from '@shared/types'
 
 const COLUMN_LABELS: { status: TaskStatus; label: string }[] = [
   { status: 'todo', label: 'Todo' },
@@ -20,15 +20,39 @@ export function CommandPalette(): React.JSX.Element | null {
   const openSettings = useUIStore((s) => s.openSettings)
   const setFocusedColumn = useUIStore((s) => s.setFocusedColumn)
 
+  const activeTaskId = useUIStore((s) => s.activeTaskId)
+
   const projectState = useTaskStore((s) => s.projectState)
   const addTask = useTaskStore((s) => s.addTask)
   const tasks = projectState?.tasks ?? []
+
+  const [settings, setSettings] = useState<ProjectSettings | null>(null)
+  useEffect(() => {
+    if (open && window.api?.readSettings) {
+      window.api.readSettings().then(setSettings).catch(() => setSettings(null))
+    }
+  }, [open])
 
   // Cmd+K is now handled by useGlobalShortcuts in App.tsx
 
   const handleClose = useCallback(() => {
     if (open) toggleCommandPalette()
   }, [open, toggleCommandPalette])
+
+  const handleRunDoctor = useCallback((autoFix: boolean) => {
+    if (!activeTaskId) return
+    const isClaudeCode = settings?.codingAgent === 'claude-code'
+    let command: string
+    if (isClaudeCode) {
+      const flags = autoFix ? ' --allow-dangerously-skip-permissions --permission-mode bypassPermissions' : ''
+      const doctorFlags = autoFix ? ' --auto-fix' : ''
+      command = `familiar doctor${doctorFlags} | claude${flags}`
+    } else {
+      command = 'familiar doctor'
+    }
+    window.dispatchEvent(new CustomEvent('run-doctor', { detail: { taskId: activeTaskId, command } }))
+    handleClose()
+  }, [activeTaskId, settings, handleClose])
 
   if (!open) return null
 
@@ -111,6 +135,26 @@ export function CommandPalette(): React.JSX.Element | null {
                   <kbd style={styles.kbd}>,</kbd>
                 </span>
               </Command.Item>
+              {activeTaskId && (
+                <>
+                  <Command.Item
+                    value="run doctor environment check diagnostic"
+                    onSelect={() => handleRunDoctor(false)}
+                    style={styles.item}
+                  >
+                    <span style={styles.itemIcon}>&#9829;</span>
+                    <span style={styles.itemLabel}>Run Doctor</span>
+                  </Command.Item>
+                  <Command.Item
+                    value="run doctor auto-fix environment check diagnostic"
+                    onSelect={() => handleRunDoctor(true)}
+                    style={styles.item}
+                  >
+                    <span style={styles.itemIcon}>&#9889;</span>
+                    <span style={styles.itemLabel}>Run Doctor (Auto-fix)</span>
+                  </Command.Item>
+                </>
+              )}
             </Command.Group>
 
             {/* Navigation section */}

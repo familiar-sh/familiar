@@ -54,8 +54,8 @@ const api = {
     ipcRenderer.invoke('clipboard:save-image', arrayBuffer, mimeType),
 
   // PTY operations
-  ptyCreate: (taskId: string, paneId: string, cwd: string, forkedFrom?: string): Promise<string> =>
-    ipcRenderer.invoke('pty:create', taskId, paneId, cwd, forkedFrom),
+  ptyCreate: (taskId: string, paneId: string, cwd: string, forkedFrom?: string, overrideCommand?: string): Promise<string> =>
+    ipcRenderer.invoke('pty:create', taskId, paneId, cwd, forkedFrom, overrideCommand),
   ptyCreatePlain: (taskId: string, paneId: string, cwd: string): Promise<string> =>
     ipcRenderer.invoke('pty:create-plain', taskId, paneId, cwd),
   ptyWrite: (sessionId: string, data: string): Promise<void> =>
@@ -82,8 +82,8 @@ const api = {
   tmuxHas: (name: string): Promise<boolean> => ipcRenderer.invoke('tmux:has', name),
   tmuxSendKeys: (sessionName: string, keys: string, pressEnter: boolean): Promise<void> =>
     ipcRenderer.invoke('tmux:send-keys', sessionName, keys, pressEnter),
-  warmupTmuxSession: (taskId: string): Promise<void> =>
-    ipcRenderer.invoke('tmux:warmup', taskId),
+  warmupTmuxSession: (taskId: string, forkedFrom?: string): Promise<void> =>
+    ipcRenderer.invoke('tmux:warmup', taskId, forkedFrom),
 
   // Notifications
   sendNotification: (title: string, body: string): Promise<void> =>
@@ -189,6 +189,8 @@ const api = {
     ipcRenderer.invoke('workspace:get-active-project'),
   workspaceSetActiveProject: (path: string): Promise<void> =>
     ipcRenderer.invoke('workspace:set-active-project', path),
+  workspaceSetActiveWorkspaceId: (workspaceId: string): Promise<void> =>
+    ipcRenderer.invoke('workspace:set-active-workspace-id', workspaceId),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),

@@ -213,7 +213,7 @@ export class ElectronPtyManager implements IPtyManager {
     return this._tmuxPath
   }
 
-  async create(taskId: string, paneId: string, cwd: string, forkedFrom?: string): Promise<string> {
+  async create(taskId: string, paneId: string, cwd: string, forkedFrom?: string, overrideCommand?: string): Promise<string> {
     const validCwd = getValidCwd(cwd)
     const env = getShellEnv()
 
@@ -232,17 +232,15 @@ export class ElectronPtyManager implements IPtyManager {
     let ptyProcess: pty.IPty
     let tmuxSessionName = ''
     let isNewSession = false
+    const familiarEnv = {
+      FAMILIAR_TASK_ID: taskId,
+      FAMILIAR_PROJECT_ROOT: cwd,
+      FAMILIAR_SETTINGS_PATH: `${cwd}/.familiar/settings.json`
+    }
 
     if (tmuxPath) {
       // tmux is available — one persistent session per task
       tmuxSessionName = `familiar-${taskId}`
-
-      // Ensure tmux session exists — create if needed, ignore "duplicate session" errors
-      const familiarEnv = {
-        FAMILIAR_TASK_ID: taskId,
-        FAMILIAR_PROJECT_ROOT: cwd,
-        FAMILIAR_SETTINGS_PATH: `${cwd}/.familiar/settings.json`
-      }
       try {
         const exists = await this._tmux.hasSession(tmuxSessionName)
         if (!exists) {
@@ -303,22 +301,26 @@ export class ElectronPtyManager implements IPtyManager {
       this._trackTerminalActivity(taskId)
     })
 
-    // Run default command on newly created sessions via tmux send-keys
-    if (isNewSession && tmuxSessionName && this._dataService) {
-      this._dataService.readSettings().then((settings) => {
-        if (settings.defaultCommand) {
-          // Resolve --resume $FAMILIAR_TASK_ID into --resume <uuid> or --session-id <uuid>
-          const resolvedCommand = resolveClaudeSessionCommand(
-            settings.defaultCommand,
-            taskId,
-            cwd
-          )
-          this._tmux.sendKeys(tmuxSessionName, resolvedCommand).catch((err) => {
-            console.warn('Failed to send default command:', err)
-          })
-        }
-      }).catch(() => {
-        // Settings not available — skip
+    // Warm up newly created sessions: dismiss interactive prompts (Ctrl-C),
+    // export env vars into the shell, and run default command.
+    // Fire-and-forget so the terminal appears immediately.
+    // Only for new sessions — existing sessions (pre-warmed by tmux:warmup) are skipped.
+    if (isNewSession && tmuxSessionName) {
+      const commandPromise = overrideCommand
+        ? Promise.resolve(overrideCommand)
+        : this._dataService
+          ? this._dataService.readSettings().then((settings) => {
+              if (settings.defaultCommand) {
+                return resolveClaudeSessionCommand(settings.defaultCommand, taskId, cwd)
+              }
+              return undefined
+            }).catch(() => undefined)
+          : Promise.resolve(undefined)
+
+      commandPromise.then((command) => {
+        return this._tmux.warmupSession(tmuxSessionName, familiarEnv, command)
+      }).catch((err) => {
+        console.warn('Failed to warm up tmux session:', err)
       })
     }
 

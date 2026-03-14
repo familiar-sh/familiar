@@ -25,10 +25,10 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
   const updateTask = useTaskStore((s) => s.updateTask)
   const openSettings = useUIStore((s) => s.openSettings)
 
-  const createSession = useCallback(async () => {
+  const createSession = useCallback(async (overrideCommand?: string) => {
     try {
       const cwd = await window.api.getProjectRoot()
-      const sid = await window.api.ptyCreate(taskId, 'main', cwd, task?.forkedFrom)
+      const sid = await window.api.ptyCreate(taskId, 'main', cwd, task?.forkedFrom, overrideCommand)
       return sid
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -162,11 +162,11 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
     }
   }, [taskId, task, updateTask, isStopping])
 
-  const handleRestartSession = useCallback(async () => {
+  const handleRestartSession = useCallback(async (overrideCommand?: string) => {
     if (isRestarting) return
     setIsRestarting(true)
     try {
-      const sid = await createSession()
+      const sid = await createSession(overrideCommand)
       if (sid) {
         sessionIdRef.current = sid
         setSessionId(sid)
@@ -176,6 +176,43 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
       setIsRestarting(false)
     }
   }, [createSession, isRestarting])
+
+  // Handle run-doctor event from command palette
+  useEffect(() => {
+    const handler = async (e: Event): Promise<void> => {
+      const detail = (e as CustomEvent<{ taskId: string; command: string }>).detail
+      if (detail.taskId !== taskId) return
+
+      // Stop existing agent first
+      if (sessionIdRef.current) {
+        try {
+          const sessions = await window.api.tmuxList()
+          const taskSessions = sessions.filter((s) => s.startsWith(`familiar-${taskId}`))
+          for (const session of taskSessions) {
+            await window.api.tmuxKill(session)
+          }
+          const sid = sessionIdRef.current
+          if (sid) {
+            await window.api.ptyDestroy(sid)
+            sessionIdRef.current = null
+            setSessionId(null)
+          }
+        } catch (err) {
+          console.error('Failed to stop agent for doctor rerun:', err)
+        }
+      }
+
+      // Create new session with the doctor command
+      const sid = await createSession(detail.command)
+      if (sid) {
+        sessionIdRef.current = sid
+        setSessionId(sid)
+        setIsStopped(false)
+      }
+    }
+    window.addEventListener('run-doctor', handler)
+    return () => window.removeEventListener('run-doctor', handler)
+  }, [taskId, createSession])
 
 
   // Show archived state — no terminal for archived tasks
@@ -219,7 +256,7 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
               ...panelStyles.restartButton,
               ...(isRestarting ? { opacity: 0.5, cursor: 'not-allowed' } : {})
             }}
-            onClick={handleRestartSession}
+            onClick={() => handleRestartSession()}
             disabled={isRestarting}
           >
             {isRestarting ? 'Starting...' : 'New Terminal Session'}

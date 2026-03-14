@@ -49,7 +49,7 @@ declare global {
       clipboardSaveImage(arrayBuffer: ArrayBuffer, mimeType: string): Promise<string>
 
       // PTY operations
-      ptyCreate(taskId: string, paneId: string, cwd: string, forkedFrom?: string): Promise<string>
+      ptyCreate(taskId: string, paneId: string, cwd: string, forkedFrom?: string, overrideCommand?: string): Promise<string>
       ptyCreatePlain(taskId: string, paneId: string, cwd: string): Promise<string>
       ptyWrite(sessionId: string, data: string): Promise<void>
       ptyResize(sessionId: string, cols: number, rows: number): Promise<void>
@@ -63,7 +63,7 @@ declare global {
       tmuxKill(name: string): Promise<void>
       tmuxHas(name: string): Promise<boolean>
       tmuxSendKeys(sessionName: string, keys: string, pressEnter: boolean): Promise<void>
-      warmupTmuxSession(taskId: string): Promise<void>
+      warmupTmuxSession(taskId: string, forkedFrom?: string): Promise<void>
 
       // Notifications
       sendNotification(title: string, body: string): Promise<void>
@@ -114,6 +114,7 @@ declare global {
       workspaceGetOpenProjects(): Promise<string[]>
       workspaceGetActiveProject(): Promise<string | null>
       workspaceSetActiveProject(path: string): Promise<void>
+      workspaceSetActiveWorkspaceId(workspaceId: string): Promise<void>
 
       // App info
       getVersion(): Promise<string>

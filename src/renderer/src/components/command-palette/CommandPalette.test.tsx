@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, beforeAll } from 'vitest'
+import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { CommandPalette } from './CommandPalette'
 import { useUIStore } from '@renderer/stores/ui-store'
@@ -118,5 +118,80 @@ describe('CommandPalette', () => {
     const input = screen.getByPlaceholderText('Type a command or search...')
     fireEvent.change(input, { target: { value: 'Fix' } })
     expect((input as HTMLInputElement).value).toBe('Fix')
+  })
+
+  it('does not show Run Doctor when no active task', () => {
+    useUIStore.setState({ commandPaletteOpen: true, activeTaskId: null })
+    render(<CommandPalette />)
+    expect(screen.queryByText('Run Doctor')).not.toBeInTheDocument()
+    expect(screen.queryByText('Run Doctor (Auto-fix)')).not.toBeInTheDocument()
+  })
+
+  it('shows Run Doctor commands when a task is active', () => {
+    // Mock window.api.readSettings
+    window.api = {
+      readSettings: vi.fn().mockResolvedValue({ codingAgent: 'claude-code' })
+    } as unknown as typeof window.api
+
+    useUIStore.setState({ commandPaletteOpen: true, activeTaskId: 'tsk_test01' })
+    render(<CommandPalette />)
+    expect(screen.getByText('Run Doctor')).toBeInTheDocument()
+    expect(screen.getByText('Run Doctor (Auto-fix)')).toBeInTheDocument()
+  })
+
+  it('dispatches run-doctor event on Run Doctor select', () => {
+    window.api = {
+      readSettings: vi.fn().mockResolvedValue({ codingAgent: 'other' })
+    } as unknown as typeof window.api
+
+    useUIStore.setState({ commandPaletteOpen: true, activeTaskId: 'tsk_test01' })
+    render(<CommandPalette />)
+
+    const listener = vi.fn()
+    window.addEventListener('run-doctor', listener)
+
+    const item = screen.getByText('Run Doctor')
+    fireEvent.click(item)
+
+    expect(listener).toHaveBeenCalledTimes(1)
+    const detail = (listener.mock.calls[0][0] as CustomEvent).detail
+    expect(detail.taskId).toBe('tsk_test01')
+    expect(detail.command).toBe('familiar doctor')
+
+    window.removeEventListener('run-doctor', listener)
+  })
+
+  it('dispatches run-doctor event with claude flags for claude-code agent', async () => {
+    let resolveSettings: (value: unknown) => void
+    const settingsPromise = new Promise((resolve) => { resolveSettings = resolve })
+    window.api = {
+      readSettings: vi.fn().mockReturnValue(settingsPromise)
+    } as unknown as typeof window.api
+
+    useUIStore.setState({ commandPaletteOpen: true, activeTaskId: 'tsk_test01' })
+    const { unmount } = render(<CommandPalette />)
+
+    // Resolve settings and wait for state update
+    resolveSettings!({ codingAgent: 'claude-code' })
+    await vi.waitFor(() => {
+      // Settings promise resolved, state should be updated after re-render
+    })
+    // Allow React to process the state update
+    await new Promise((r) => setTimeout(r, 0))
+
+    const listener = vi.fn()
+    window.addEventListener('run-doctor', listener)
+
+    const item = screen.getByText('Run Doctor (Auto-fix)')
+    fireEvent.click(item)
+
+    expect(listener).toHaveBeenCalledTimes(1)
+    const detail = (listener.mock.calls[0][0] as CustomEvent).detail
+    expect(detail.taskId).toBe('tsk_test01')
+    expect(detail.command).toContain('familiar doctor --auto-fix')
+    expect(detail.command).toContain('claude')
+
+    window.removeEventListener('run-doctor', listener)
+    unmount()
   })
 })
