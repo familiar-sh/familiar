@@ -244,6 +244,35 @@ describe('useUIStore', () => {
     })
   })
 
+  describe('onboarding', () => {
+    it('openOnboarding opens onboarding with explicit=false by default', () => {
+      useUIStore.getState().openOnboarding()
+      expect(useUIStore.getState().onboardingOpen).toBe(true)
+      expect(useUIStore.getState().onboardingExplicit).toBe(false)
+    })
+
+    it('openOnboarding(true) sets onboardingExplicit to true', () => {
+      useUIStore.getState().openOnboarding(true)
+      expect(useUIStore.getState().onboardingOpen).toBe(true)
+      expect(useUIStore.getState().onboardingExplicit).toBe(true)
+    })
+
+    it('closeOnboarding resets both onboardingOpen and onboardingExplicit', () => {
+      useUIStore.getState().openOnboarding(true)
+      useUIStore.getState().closeOnboarding()
+      expect(useUIStore.getState().onboardingOpen).toBe(false)
+      expect(useUIStore.getState().onboardingExplicit).toBe(false)
+    })
+
+    it('openOnboarding closes task detail, settings, and command palette', () => {
+      useUIStore.setState({ taskDetailOpen: true, settingsOpen: true, commandPaletteOpen: true })
+      useUIStore.getState().openOnboarding()
+      expect(useUIStore.getState().taskDetailOpen).toBe(false)
+      expect(useUIStore.getState().settingsOpen).toBe(false)
+      expect(useUIStore.getState().commandPaletteOpen).toBe(false)
+    })
+  })
+
   describe('createTaskModal', () => {
     it('opens and closes the create task modal', () => {
       expect(useUIStore.getState().createTaskModalOpen).toBe(false)

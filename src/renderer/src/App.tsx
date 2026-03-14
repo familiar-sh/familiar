@@ -18,6 +18,7 @@ function App(): React.JSX.Element {
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
   const projectState = useTaskStore((s) => s.projectState)
   const loadNotifications = useNotificationStore((s) => s.loadNotifications)
+  const loadWorkspaceNotifications = useNotificationStore((s) => s.loadWorkspaceNotifications)
   const loadOpenProjects = useWorkspaceStore((s) => s.loadOpenProjects)
   const showWorkspacePicker = useWorkspaceStore((s) => s.showWorkspacePicker)
   const setShowWorkspacePicker = useWorkspaceStore((s) => s.setShowWorkspacePicker)
@@ -33,6 +34,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     loadProjectState()
     loadNotifications()
+    loadWorkspaceNotifications()
     loadOpenProjects()
 
     // Load theme preferences from settings
@@ -47,7 +49,7 @@ function App(): React.JSX.Element {
       .catch(() => {
         /* use defaults */
       })
-  }, [loadProjectState, loadNotifications, loadOpenProjects])
+  }, [loadProjectState, loadNotifications, loadWorkspaceNotifications, loadOpenProjects])
 
   // When switching to an uninitialized project, open onboarding.
   // When switching to an initialized project, close onboarding.
@@ -56,6 +58,7 @@ function App(): React.JSX.Element {
   const onboardingOpen = useUIStore((s) => s.onboardingOpen)
   const closeOnboarding = useUIStore((s) => s.closeOnboarding)
   const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
+  const onboardingExplicit = useUIStore((s) => s.onboardingExplicit)
   useEffect(() => {
     async function checkInitialized(): Promise<void> {
       const initialized = await window.api.isInitialized()
@@ -67,29 +70,32 @@ function App(): React.JSX.Element {
           // No project at all on initial launch — show workspace picker
           setShowWorkspacePicker(true)
         }
-      } else if (onboardingOpen) {
-        // Switched to an initialized project — close onboarding
+      } else if (onboardingOpen && !onboardingExplicit) {
+        // Switched to an initialized project — close auto-triggered onboarding
+        // (but keep onboarding open if explicitly requested from menu)
         closeOnboarding()
       }
     }
     checkInitialized()
-  }, [projectState, activeProjectPath, setShowWorkspacePicker, openOnboarding, closeOnboarding, onboardingOpen])
+  }, [projectState, activeProjectPath, setShowWorkspacePicker, openOnboarding, closeOnboarding, onboardingOpen, onboardingExplicit])
 
   // Reload state when external changes are detected (e.g. CLI updates).
-  // Only reload when the change is for the active project — file watchers
-  // from non-active projects in a multi-project workspace should not trigger
-  // a reload (they would just re-read the active project's data anyway, and
-  // the overlapping async calls can race with project switches).
+  // Active-project state (tasks, per-project notifications) only reloads for
+  // the active project. Workspace-wide notifications reload for ANY project
+  // change so the navbar/sidebar always show cross-project status.
   useEffect(() => {
     return onFileChange((changedProjectPath) => {
+      // Always reload workspace-wide notifications for any project change
+      loadWorkspaceNotifications()
+
       const currentActive = useWorkspaceStore.getState().activeProjectPath
       if (changedProjectPath && currentActive && changedProjectPath !== currentActive) {
-        return // Ignore file changes from non-active projects
+        return // Skip per-project reloads for non-active projects
       }
       loadProjectState()
       loadNotifications()
     })
-  }, [loadProjectState, loadNotifications])
+  }, [loadProjectState, loadNotifications, loadWorkspaceNotifications])
 
   // Listen for "Open Workspace" from the application menu
   const openWorkspace = useTaskStore((s) => s.openWorkspace)
@@ -126,7 +132,7 @@ function App(): React.JSX.Element {
   // Listen for "Run Onboarding" from the application menu
   useEffect(() => {
     const unsubscribe = window.api.onMenuRunOnboarding(() => {
-      openOnboarding()
+      openOnboarding(true)
     })
     return () => {
       unsubscribe()

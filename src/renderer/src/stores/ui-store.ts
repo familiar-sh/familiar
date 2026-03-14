@@ -47,6 +47,7 @@ interface UIState {
 
   // Onboarding wizard (can be re-triggered from help menu)
   onboardingOpen: boolean
+  onboardingExplicit: boolean // true when opened explicitly from menu (not auto-triggered)
 
   // Board filters
   filters: TaskFilters
@@ -79,7 +80,7 @@ interface UIState {
   closeCreateTaskModal: () => void
   openShortcutsModal: () => void
   closeShortcutsModal: () => void
-  openOnboarding: () => void
+  openOnboarding: (explicit?: boolean) => void
   closeOnboarding: () => void
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void
   clearFilters: () => void
@@ -141,6 +142,7 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Onboarding
   onboardingOpen: false,
+  onboardingExplicit: false,
 
   // Board filters
   filters: { ...defaultFilters },
@@ -217,11 +219,11 @@ export const useUIStore = create<UIState>((set) => ({
   closeShortcutsModal: () =>
     set({ shortcutsModalOpen: false }),
 
-  openOnboarding: () =>
-    set({ onboardingOpen: true, taskDetailOpen: false, settingsOpen: false, commandPaletteOpen: false }),
+  openOnboarding: (explicit = false) =>
+    set({ onboardingOpen: true, onboardingExplicit: explicit, taskDetailOpen: false, settingsOpen: false, commandPaletteOpen: false }),
 
   closeOnboarding: () =>
-    set({ onboardingOpen: false }),
+    set({ onboardingOpen: false, onboardingExplicit: false }),
 
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
