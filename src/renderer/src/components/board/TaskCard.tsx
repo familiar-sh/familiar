@@ -10,6 +10,8 @@ import { useProjectLabels } from '@renderer/hooks/useProjectLabels'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useBoardStore } from '@renderer/stores/board-store'
+import { onFileChange } from '@renderer/lib/file-change-hub'
+import { formatRelativeTime } from '@renderer/lib/format-time'
 import { ContextMenu, PriorityIcon } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import styles from './TaskCard.module.css'
@@ -77,19 +79,49 @@ export function TaskCard({
   const [editTitleValue, setEditTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Description preview
-  const [documentContent, setDocumentContent] = useState<string | null>(null)
+  // Last activity for in-progress tasks
+  const [lastActivity, setLastActivity] = useState<string | null>(null)
+  const [lastActivityTime, setLastActivityTime] = useState<string | null>(null)
 
-  // Load document content on mount
+  // Load last activity for in-progress tasks
   useEffect(() => {
+    if (task.status !== 'in-progress') {
+      setLastActivity(null)
+      setLastActivityTime(null)
+      return
+    }
     let cancelled = false
-    window.api.readTaskDocument(task.id).then((content) => {
-      if (!cancelled) setDocumentContent(content || '')
+    window.api.readTaskActivity(task.id).then((entries) => {
+      if (cancelled) return
+      // Find last 'note' entry (progress updates, not status changes)
+      const notes = entries.filter((e) => e.type === 'note')
+      const last = notes.length > 0 ? notes[notes.length - 1] : null
+      setLastActivity(last?.message ?? null)
+      setLastActivityTime(last?.timestamp ?? null)
     }).catch(() => {
-      if (!cancelled) setDocumentContent('')
+      if (!cancelled) {
+        setLastActivity(null)
+        setLastActivityTime(null)
+      }
     })
     return () => { cancelled = true }
-  }, [task.id])
+  }, [task.id, task.status])
+
+  // Re-read activity when files change (agent logs progress)
+  useEffect(() => {
+    if (task.status !== 'in-progress') return
+    return onFileChange(async () => {
+      try {
+        const entries = await window.api.readTaskActivity(task.id)
+        const notes = entries.filter((e) => e.type === 'note')
+        const last = notes.length > 0 ? notes[notes.length - 1] : null
+        setLastActivity(last?.message ?? null)
+        setLastActivityTime(last?.timestamp ?? null)
+      } catch {
+        // Ignore
+      }
+    })
+  }, [task.id, task.status])
 
   // Auto-resize textarea to fit content
   const resizeTitleTextarea = useCallback(() => {
@@ -484,12 +516,13 @@ export function TaskCard({
           </div>
         )}
 
-        {/* Description preview — click opens task detail */}
-        {documentContent !== null && documentContent.length > 0 && (
-          <div className={styles.descriptionPreview}>
-            {documentContent.split('\n').filter(Boolean).slice(0, 3).map((line, i) => (
-              <div key={i} className={styles.descriptionLine}>{line}</div>
-            ))}
+        {/* Last activity for in-progress tasks */}
+        {task.status === 'in-progress' && lastActivity && (
+          <div className={styles.activityPreview}>
+            <span className={styles.activityMessage}>{lastActivity}</span>
+            {lastActivityTime && (
+              <span className={styles.activityTime}>{formatRelativeTime(lastActivityTime)}</span>
+            )}
           </div>
         )}
 

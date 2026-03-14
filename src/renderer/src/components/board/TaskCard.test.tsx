@@ -47,9 +47,15 @@ vi.mock('@renderer/stores/board-store', () => ({
   }
 }))
 
+// Mock file-change-hub
+vi.mock('@renderer/lib/file-change-hub', () => ({
+  onFileChange: vi.fn().mockReturnValue(() => {})
+}))
+
 // Mock window.api
 ;(window as any).api = {
   readTaskDocument: vi.fn().mockResolvedValue(''),
+  readTaskActivity: vi.fn().mockResolvedValue([]),
   readProjectState: vi.fn().mockResolvedValue({ labels: [] }),
   watchProjectDir: vi.fn().mockReturnValue(vi.fn())
 }
@@ -75,8 +81,6 @@ vi.mock('./TaskCard.module.css', () => ({
     priorityDropdown: 'priorityDropdown',
     priorityOption: 'priorityOption',
     priorityOptionActive: 'priorityOptionActive',
-    descriptionPreview: 'descriptionPreview',
-    descriptionLine: 'descriptionLine',
     attachmentThumbs: 'attachmentThumbs',
     attachmentThumb: 'attachmentThumb',
     attachmentMore: 'attachmentMore',
@@ -90,7 +94,10 @@ vi.mock('./TaskCard.module.css', () => ({
     snippetBtnSent: 'snippetBtnSent',
     overlayWrapper: 'overlayWrapper',
     selectionBadge: 'selectionBadge',
-    stackedCard: 'stackedCard'
+    stackedCard: 'stackedCard',
+    activityPreview: 'activityPreview',
+    activityMessage: 'activityMessage',
+    activityTime: 'activityTime'
   }
 }))
 
@@ -194,5 +201,60 @@ describe('TaskCard — outline class precedence', () => {
     )
     const card = container.firstElementChild!
     expect(card.className).not.toContain('cardNotified')
+  })
+})
+
+const mockApi = (window as any).api
+
+describe('TaskCard — activity preview', () => {
+  beforeEach(() => {
+    mockNotifications.length = 0
+    mockApi.readTaskActivity.mockResolvedValue([])
+  })
+
+  it('shows last activity note for in-progress tasks', async () => {
+    mockApi.readTaskActivity.mockResolvedValue([
+      { id: '1', timestamp: '2026-03-14T20:00:00Z', type: 'status_change', message: 'Status changed' },
+      { id: '2', timestamp: '2026-03-14T20:01:00Z', type: 'note', message: 'Reading codebase' },
+      { id: '3', timestamp: '2026-03-14T20:05:00Z', type: 'note', message: 'Writing tests' }
+    ])
+
+    render(
+      <TaskCard task={makeTask({ status: 'in-progress' })} onClick={vi.fn()} />
+    )
+
+    // Wait for async activity load
+    const activityMessage = await screen.findByText('Writing tests')
+    expect(activityMessage).toBeDefined()
+  })
+
+  it('does not show activity preview for todo tasks', async () => {
+    mockApi.readTaskActivity.mockResolvedValue([
+      { id: '1', timestamp: '2026-03-14T20:01:00Z', type: 'note', message: 'Some note' }
+    ])
+
+    const { container } = render(
+      <TaskCard task={makeTask({ status: 'todo' })} onClick={vi.fn()} />
+    )
+
+    // Give time for any async operations
+    await vi.waitFor(() => {
+      expect(container.querySelector('.activityPreview')).toBeNull()
+    })
+  })
+
+  it('does not show activity preview when no notes exist', async () => {
+    mockApi.readTaskActivity.mockResolvedValue([
+      { id: '1', timestamp: '2026-03-14T20:00:00Z', type: 'status_change', message: 'Status changed' }
+    ])
+
+    const { container } = render(
+      <TaskCard task={makeTask({ status: 'in-progress' })} onClick={vi.fn()} />
+    )
+
+    // Give time for async load, then verify no activity preview
+    await vi.waitFor(() => {
+      expect(container.querySelector('.activityPreview')).toBeNull()
+    })
   })
 })
