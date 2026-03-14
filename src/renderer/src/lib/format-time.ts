@@ -34,3 +34,27 @@ export function formatRelativeTime(isoString: string, now: Date = new Date()): s
   }
   return `${month} ${day}, ${yearDate}`
 }
+
+/**
+ * Format an ISO 8601 timestamp as a compact duration string.
+ *
+ * Examples: "1m", "45m", "2h", "1d 14h", "3d"
+ */
+export function formatDuration(isoString: string, now: Date = new Date()): string {
+  const date = new Date(isoString)
+  const diffMs = now.getTime() - date.getTime()
+
+  if (diffMs < 0) return '0m'
+
+  const totalMinutes = Math.floor(diffMs / 60000)
+  if (totalMinutes < 1) return '<1m'
+  if (totalMinutes < 60) return `${totalMinutes}m`
+
+  const totalHours = Math.floor(totalMinutes / 60)
+  if (totalHours < 24) return `${totalHours}h`
+
+  const days = Math.floor(totalHours / 24)
+  const remainingHours = totalHours % 24
+  if (remainingHours === 0) return `${days}d`
+  return `${days}d ${remainingHours}h`
+}

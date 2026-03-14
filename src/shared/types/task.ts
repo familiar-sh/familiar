@@ -25,6 +25,7 @@ export interface Task {
   createdAt: string // ISO 8601
   updatedAt: string
   sortOrder: number // within column
+  statusChangedAt?: string // ISO 8601 — when the task entered its current status column
   attachments?: string[] // filenames in task attachments folder
   pastedFiles?: TaskPastedFile[] // large pasted content stored as files
   forkedFrom?: string // parent task ID when this task was forked

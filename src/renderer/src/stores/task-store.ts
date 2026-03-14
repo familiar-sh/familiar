@@ -156,6 +156,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       agentStatus: 'idle',
       createdAt: now,
       updatedAt: now,
+      statusChangedAt: now,
       sortOrder: 0,
       ...options
     }
@@ -249,6 +250,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // Detect status change — move task to top of new column
     const oldTask = projectState.tasks.find((t: Task) => t.id === updatedTask.id)
     const statusChanged = oldTask && oldTask.status !== updatedTask.status
+
+    if (statusChanged) {
+      updatedTask.statusChangedAt = now
+    }
 
     let newTasks: Task[]
     if (statusChanged) {
@@ -388,7 +393,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const now = new Date().toISOString()
     const updatedTasks = projectState.tasks.map((t: Task) => {
       if (t.id === taskId) {
-        return { ...t, status: newStatus, sortOrder: clampedIndex, updatedAt: now }
+        const update: Partial<Task> = { status: newStatus, sortOrder: clampedIndex, updatedAt: now }
+        if (t.status !== newStatus) update.statusChangedAt = now
+        return { ...t, ...update }
       }
       const newSort = sortUpdates.get(t.id)
       if (newSort !== undefined && newSort !== t.sortOrder) {
@@ -503,7 +510,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const updatedTasks = projectState.tasks.map((t: Task) => {
       if (taskIdSet.has(t.id)) {
         const newSort = sortUpdates.get(t.id)
-        return { ...t, status: newStatus, sortOrder: newSort ?? 0, updatedAt: now }
+        const update: Partial<Task> = { status: newStatus, sortOrder: newSort ?? 0, updatedAt: now }
+        if (t.status !== newStatus) update.statusChangedAt = now
+        return { ...t, ...update }
       }
       const newSort = sortUpdates.get(t.id)
       if (newSort !== undefined && newSort !== t.sortOrder) {
@@ -586,7 +595,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // Shift existing archived tasks down to make room at the top
     const updatedTasks = projectState.tasks.map((t: Task) => {
       if (doneIds.has(t.id)) {
-        return { ...t, status: 'archived' as TaskStatus, agentStatus: 'idle' as const, updatedAt: now }
+        return { ...t, status: 'archived' as TaskStatus, agentStatus: 'idle' as const, updatedAt: now, statusChangedAt: now }
       }
       if (t.status === 'archived') {
         return { ...t, sortOrder: t.sortOrder + doneTasks.length, updatedAt: now }

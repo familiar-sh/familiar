@@ -19,6 +19,7 @@ export function createTask(title: string, options?: Partial<Task>): Task {
     agentStatus: 'idle' as AgentStatus,
     createdAt: now,
     updatedAt: now,
+    statusChangedAt: now,
     sortOrder: 0,
     ...options
   }

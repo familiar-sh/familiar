@@ -11,7 +11,7 @@ import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useBoardStore } from '@renderer/stores/board-store'
 import { onFileChange } from '@renderer/lib/file-change-hub'
-import { formatRelativeTime } from '@renderer/lib/format-time'
+import { formatRelativeTime, formatDuration } from '@renderer/lib/format-time'
 import { ContextMenu, PriorityIcon } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import styles from './TaskCard.module.css'
@@ -78,6 +78,19 @@ export function TaskCard({
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitleValue, setEditTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Column duration — live-updating every minute
+  const [columnDuration, setColumnDuration] = useState<string | null>(() =>
+    task.statusChangedAt ? formatDuration(task.statusChangedAt) : null
+  )
+  useEffect(() => {
+    if (!task.statusChangedAt) { setColumnDuration(null); return }
+    setColumnDuration(formatDuration(task.statusChangedAt))
+    const timer = setInterval(() => {
+      setColumnDuration(formatDuration(task.statusChangedAt!))
+    }, 60_000)
+    return () => clearInterval(timer)
+  }, [task.statusChangedAt])
 
   // Last activity for in-progress tasks
   const [lastActivity, setLastActivity] = useState<string | null>(null)
@@ -460,6 +473,11 @@ export function TaskCard({
             style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
             aria-label={`Agent: ${task.agentStatus}`}
           />
+          {columnDuration && (
+            <span className={styles.columnDuration} title="Time in current column">
+              {columnDuration}
+            </span>
+          )}
           {task.forkedFrom && (
             <span className={styles.forkIcon} aria-label="Forked task" title={`Forked from ${task.forkedFrom}`}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -69,6 +69,9 @@ export function statusCommand(): Command {
       // Update task in state
       state.tasks[taskIndex].status = newStatus
       state.tasks[taskIndex].updatedAt = now
+      if (oldStatus !== newStatus) {
+        state.tasks[taskIndex].statusChangedAt = now
+      }
       if (newStatus === 'archived') {
         state.tasks[taskIndex].agentStatus = 'idle'
       } else if (newStatus === 'in-review' || newStatus === 'done') {
@@ -82,6 +85,9 @@ export function statusCommand(): Command {
       task.status = newStatus
       task.sortOrder = state.tasks[taskIndex].sortOrder
       task.updatedAt = now
+      if (oldStatus !== newStatus) {
+        task.statusChangedAt = now
+      }
       if (newStatus === 'archived') {
         task.agentStatus = 'idle'
       } else if (newStatus === 'in-review' || newStatus === 'done') {
