@@ -25,12 +25,18 @@ const mockWorkspaceListAllTasks = vi.fn()
 const mockReadTaskActivity = vi.fn()
 const mockWorkspaceSetActiveProject = vi.fn()
 const mockMarkNotificationRead = vi.fn()
+const mockReadProjectState = vi.fn()
+const mockListNotifications = vi.fn()
+const mockListAllNotifications = vi.fn()
 
 ;(window as any).api = {
   workspaceListAllTasks: mockWorkspaceListAllTasks,
   readTaskActivity: mockReadTaskActivity,
   workspaceSetActiveProject: mockWorkspaceSetActiveProject,
-  markNotificationRead: mockMarkNotificationRead
+  markNotificationRead: mockMarkNotificationRead,
+  readProjectState: mockReadProjectState,
+  listNotifications: mockListNotifications,
+  listAllNotifications: mockListAllNotifications
 }
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -54,6 +60,15 @@ describe('AgentSwapWidget', () => {
     mockReadTaskActivity.mockResolvedValue([])
     mockWorkspaceSetActiveProject.mockResolvedValue(undefined)
     mockMarkNotificationRead.mockResolvedValue(undefined)
+    mockReadProjectState.mockResolvedValue({
+      version: 1,
+      projectName: 'Test',
+      tasks: [],
+      columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
+      labels: []
+    })
+    mockListNotifications.mockResolvedValue([])
+    mockListAllNotifications.mockResolvedValue([])
 
     useTaskStore.setState({
       projectState: {

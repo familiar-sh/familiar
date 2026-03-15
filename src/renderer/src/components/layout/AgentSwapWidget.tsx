@@ -149,14 +149,26 @@ export function AgentSwapWidget(): React.JSX.Element | null {
     return null
   }
 
+  // Full project switch: save current state, switch, reload data, then open task
+  const switchProjectAndOpenTask = async (targetProjectPath: string, taskId: string): Promise<void> => {
+    const activeProject = useWorkspaceStore.getState().activeProjectPath
+    if (activeProject) {
+      useUIStore.getState().saveProjectTaskState(activeProject)
+    }
+    await useWorkspaceStore.getState().switchProject(targetProjectPath)
+    await useTaskStore.getState().loadProjectState()
+    await useNotificationStore.getState().loadNotifications()
+    await useNotificationStore.getState().loadWorkspaceNotifications()
+    // Don't restore saved state — override with the clicked task
+    openTaskDetail(taskId)
+  }
+
   const handleAgentClick = (taskId: string): void => {
     // If the task belongs to a different project/worktree, switch to it first
     const task = allTasks.find((t) => t.id === taskId)
     const activeProject = useWorkspaceStore.getState().activeProjectPath
     if (task?.projectPath && task.projectPath !== activeProject) {
-      useWorkspaceStore.getState().switchProject(task.projectPath).then(() => {
-        openTaskDetail(taskId)
-      })
+      switchProjectAndOpenTask(task.projectPath, taskId)
     } else {
       openTaskDetail(taskId)
     }
@@ -169,9 +181,7 @@ export function AgentSwapWidget(): React.JSX.Element | null {
       // If the notification belongs to a different project/worktree, switch first
       const activeProject = useWorkspaceStore.getState().activeProjectPath
       if (notification.projectPath && notification.projectPath !== activeProject) {
-        useWorkspaceStore.getState().switchProject(notification.projectPath).then(() => {
-          openTaskDetail(notification.taskId!)
-        })
+        switchProjectAndOpenTask(notification.projectPath, notification.taskId)
       } else {
         openTaskDetail(notification.taskId)
       }
