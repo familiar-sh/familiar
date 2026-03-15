@@ -1,4 +1,4 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, clipboard } from 'electron'
 import { writeFile, cp, rm } from 'fs/promises'
 import { join } from 'path'
 import { DataService } from '../services/data-service'
@@ -37,6 +37,17 @@ export function registerFileHandlers(
       return filePath
     }
   )
+  // Read image directly from the native clipboard (fallback when paste event lacks image items)
+  ipcMain.handle('clipboard:read-native-image', async (): Promise<string | null> => {
+    const image = clipboard.readImage()
+    if (image.isEmpty()) return null
+    const buffer = image.toPNG()
+    const fileName = `clipboard-${Date.now()}.png`
+    const filePath = join(app.getPath('temp'), fileName)
+    await writeFile(filePath, buffer)
+    return filePath
+  })
+
   ipcMain.handle('project:get-root', async () => dataService.getProjectRoot())
   ipcMain.handle('project:read-state', async () => dataService.readProjectState())
   ipcMain.handle('project:write-state', async (_, state) =>

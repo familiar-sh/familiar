@@ -52,6 +52,8 @@ const api = {
   // Clipboard
   clipboardSaveImage: (arrayBuffer: ArrayBuffer, mimeType: string): Promise<string> =>
     ipcRenderer.invoke('clipboard:save-image', arrayBuffer, mimeType),
+  clipboardReadNativeImage: (): Promise<string | null> =>
+    ipcRenderer.invoke('clipboard:read-native-image'),
 
   // PTY operations
   ptyCreate: (taskId: string, paneId: string, cwd: string, forkedFrom?: string, overrideCommand?: string): Promise<string> =>

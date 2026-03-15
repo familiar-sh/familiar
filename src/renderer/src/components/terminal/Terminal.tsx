@@ -188,6 +188,28 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
           }
         }
       }
+      // Case 3: Native clipboard fallback — the paste event may lack image items
+      // (e.g. CleanShot screenshots, some macOS clipboard sources). Use Electron's
+      // native clipboard.readImage() as a last resort before falling through to text.
+      const plainText = clipData.getData('text/plain')
+      if (!plainText) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        try {
+          const savedPath = await window.api.clipboardReadNativeImage()
+          if (savedPath) {
+            console.debug(`[paste] case 3: native clipboard image → ${savedPath}`)
+            window.api.ptyWrite(sessionIdRef.current, savedPath)
+            return
+          }
+        } catch (err) {
+          console.error('[paste] Failed to read native clipboard image:', err)
+        }
+        // No image found and no text — nothing to paste
+        console.debug('[paste] case 3: no native image found, nothing to paste')
+        return
+      }
+
       // Text-only paste: let xterm.js handle it normally
       console.debug('[paste] fallthrough: text-only, letting xterm handle')
     }
