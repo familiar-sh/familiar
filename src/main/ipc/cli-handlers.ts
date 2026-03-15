@@ -1,7 +1,7 @@
 import { ipcMain, app } from 'electron'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { existsSync, mkdirSync, symlinkSync, readFileSync, appendFileSync } from 'fs'
+import { existsSync, lstatSync, mkdirSync, symlinkSync, unlinkSync, readFileSync, appendFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { homedir } from 'os'
 
@@ -125,10 +125,12 @@ export function registerCliHandlers(): void {
           mkdirSync(CLI_BIN_DIR, { recursive: true })
         }
 
-        // Remove existing symlink if present
-        if (existsSync(CLI_SYMLINK)) {
-          const { unlinkSync } = await import('fs')
+        // Remove existing symlink if present (lstatSync detects broken symlinks too)
+        try {
+          lstatSync(CLI_SYMLINK)
           unlinkSync(CLI_SYMLINK)
+        } catch {
+          // Symlink doesn't exist at all — nothing to remove
         }
 
         symlinkSync(cliBin, CLI_SYMLINK)
