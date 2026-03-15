@@ -81,6 +81,36 @@ export function ProjectSidebar(): React.JSX.Element | null {
     }
   }, [renameDialog])
 
+  const handleRenameConfirm = useCallback(async (): Promise<void> => {
+    if (!renameDialog) return
+    const trimmed = renameValue.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')
+    if (!trimmed || trimmed === renameDialog.currentSlug) {
+      setRenameDialog(null)
+      return
+    }
+    try {
+      await renameWorktree(renameDialog.worktreePath, trimmed)
+    } catch (err) {
+      console.error('Failed to rename worktree:', err)
+    }
+    setRenameDialog(null)
+  }, [renameDialog, renameValue, renameWorktree])
+
+  const handleRenameCancel = useCallback((): void => {
+    setRenameDialog(null)
+  }, [])
+
+  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleRenameConfirm()
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      handleRenameCancel()
+    }
+  }, [handleRenameConfirm, handleRenameCancel])
+
   if (!sidebarVisible) return null
 
   const handleSwitchProject = async (path: string): Promise<void> => {
@@ -143,36 +173,6 @@ export function ProjectSidebar(): React.JSX.Element | null {
     setRenameValue(currentSlug)
     setRenameDialog({ worktreePath, currentSlug })
   }
-
-  const handleRenameConfirm = useCallback(async (): Promise<void> => {
-    if (!renameDialog) return
-    const trimmed = renameValue.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')
-    if (!trimmed || trimmed === renameDialog.currentSlug) {
-      setRenameDialog(null)
-      return
-    }
-    try {
-      await renameWorktree(renameDialog.worktreePath, trimmed)
-    } catch (err) {
-      console.error('Failed to rename worktree:', err)
-    }
-    setRenameDialog(null)
-  }, [renameDialog, renameValue, renameWorktree])
-
-  const handleRenameCancel = useCallback((): void => {
-    setRenameDialog(null)
-  }, [])
-
-  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleRenameConfirm()
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      handleRenameCancel()
-    }
-  }, [handleRenameConfirm, handleRenameCancel])
 
   const handleProjectContextMenu = (e: React.MouseEvent, projectPath: string): void => {
     e.preventDefault()
