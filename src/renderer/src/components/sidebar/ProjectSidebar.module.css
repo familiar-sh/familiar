@@ -219,32 +219,7 @@
   text-overflow: ellipsis;
 }
 
-/* Create worktree inline button */
-.createWorktreeButton {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 2px 8px 2px 24px;
-  border: none;
-  background: transparent;
-  color: var(--text-quaternary);
-  cursor: pointer;
-  font-size: 11px;
-  transition: color var(--transition-fast);
-  width: 100%;
-}
-
-.createWorktreeButton:hover {
-  color: var(--text-secondary);
-}
-
-/* Bottom buttons container */
-.bottomButtons {
-  flex-shrink: 0;
-  border-top: 1px solid var(--border);
-}
-
-/* Add project / create worktree buttons */
+/* Add project button */
 .addButton {
   display: flex;
   align-items: center;
@@ -259,6 +234,8 @@
   font-size: var(--font-size-sm);
   transition: color var(--transition-fast), background-color var(--transition-fast);
   flex-shrink: 0;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
 }
 
 .addButton:hover {

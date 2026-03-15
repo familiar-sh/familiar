@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
+import { ContextMenu } from '@renderer/components/common/ContextMenu'
+import type { ContextMenuItem } from '@renderer/components/common/ContextMenu'
 import styles from './ProjectSidebar.module.css'
 
 // Generate a consistent color from project name
@@ -46,16 +48,29 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const saveProjectTaskState = useUIStore((s) => s.saveProjectTaskState)
   const restoreProjectTaskState = useUIStore((s) => s.restoreProjectTaskState)
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    position: { x: number; y: number }
+    items: ContextMenuItem[]
+  } | null>(null)
+
   // Load worktrees on mount and when projects change
   useEffect(() => {
     loadWorktrees()
   }, [activeProjectPath])
 
+  // Close context menu on click outside
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClick = (): void => setContextMenu(null)
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [contextMenu])
+
   if (!sidebarVisible) return null
 
   const handleSwitchProject = async (path: string): Promise<void> => {
     if (path === activeProjectPath) return
-    // Save current project's task detail state before switching
     if (activeProjectPath) {
       saveProjectTaskState(activeProjectPath)
     }
@@ -76,7 +91,6 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const handleCreateWorktree = async (): Promise<void> => {
     try {
       const worktree = await createWorktree()
-      // Open the worktree as a new project and switch to it
       await window.api.workspaceAddProject(worktree.path)
       const { loadOpenProjects } = useWorkspaceStore.getState()
       await loadOpenProjects()
@@ -87,7 +101,6 @@ export function ProjectSidebar(): React.JSX.Element | null {
   }
 
   const handleOpenWorktree = async (worktreePath: string): Promise<void> => {
-    // If the worktree isn't already open as a project, add it
     if (!openProjects.some((p) => p.path === worktreePath)) {
       await window.api.workspaceAddProject(worktreePath)
       const { loadOpenProjects } = useWorkspaceStore.getState()
@@ -96,14 +109,64 @@ export function ProjectSidebar(): React.JSX.Element | null {
     await handleSwitchProject(worktreePath)
   }
 
-  const handleRemoveWorktree = async (e: React.MouseEvent, worktreePath: string): Promise<void> => {
-    e.stopPropagation()
+  const handleRemoveWorktree = async (worktreePath: string): Promise<void> => {
     if (!confirm('Remove this worktree? This will delete the worktree directory and its branch.')) return
     try {
       await removeWorktree(worktreePath)
     } catch (err) {
       console.error('Failed to remove worktree:', err)
     }
+  }
+
+  const handleProjectContextMenu = (e: React.MouseEvent, projectPath: string): void => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const items: ContextMenuItem[] = [
+      {
+        label: 'New Worktree',
+        icon: <BranchIcon />,
+        onClick: handleCreateWorktree
+      },
+      {
+        label: 'Open in Finder',
+        onClick: () => window.api.openPath(projectPath)
+      }
+    ]
+
+    // Add remove option if not the only project
+    if (openProjects.length > 1 && projectPath !== activeProjectPath) {
+      items.push(
+        { label: '', onClick: () => {}, divider: true },
+        {
+          label: 'Remove Project',
+          danger: true,
+          onClick: () => removeProject(projectPath)
+        }
+      )
+    }
+
+    setContextMenu({ position: { x: e.clientX, y: e.clientY }, items })
+  }
+
+  const handleWorktreeContextMenu = (e: React.MouseEvent, worktreePath: string): void => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const items: ContextMenuItem[] = [
+      {
+        label: 'Open in Finder',
+        onClick: () => window.api.openPath(worktreePath)
+      },
+      { label: '', onClick: () => {}, divider: true },
+      {
+        label: 'Remove Worktree',
+        danger: true,
+        onClick: () => handleRemoveWorktree(worktreePath)
+      }
+    ]
+
+    setContextMenu({ position: { x: e.clientX, y: e.clientY }, items })
   }
 
   return (
@@ -143,6 +206,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
               <div
                 className={`${styles.projectItem} ${isActive ? styles.projectItemActive : ''}`}
                 onClick={() => handleSwitchProject(project.path)}
+                onContextMenu={(e) => handleProjectContextMenu(e, project.path)}
                 title={project.path}
                 data-testid={`project-item-${project.name}`}
               >
@@ -192,6 +256,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
                     key={wt.path}
                     className={`${styles.worktreeItem} ${isWtActive ? styles.projectItemActive : ''}`}
                     onClick={() => handleOpenWorktree(wt.path)}
+                    onContextMenu={(e) => handleWorktreeContextMenu(e, wt.path)}
                     title={`${wt.branch}\n${wt.path}`}
                     data-testid={`worktree-item-${wt.slug}`}
                   >
@@ -206,7 +271,10 @@ export function ProjectSidebar(): React.JSX.Element | null {
                     {sidebarExpanded && (
                       <button
                         className={styles.removeButton}
-                        onClick={(e) => handleRemoveWorktree(e, wt.path)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRemoveWorktree(wt.path)
+                        }}
                         title="Remove worktree"
                       >
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -218,54 +286,33 @@ export function ProjectSidebar(): React.JSX.Element | null {
                   </div>
                 )
               })}
-
-              {/* Create worktree button (shown under projects that have a git repo) */}
-              {worktrees.length > 0 && sidebarExpanded && (
-                <button
-                  className={styles.createWorktreeButton}
-                  onClick={handleCreateWorktree}
-                  title="Create worktree"
-                  data-testid="create-worktree-button"
-                >
-                  <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <line x1="7" y1="3" x2="7" y2="11" />
-                    <line x1="3" y1="7" x2="11" y2="7" />
-                  </svg>
-                  <span>New worktree</span>
-                </button>
-              )}
             </div>
           )
         })}
       </div>
 
-      {/* Bottom buttons */}
-      <div className={styles.bottomButtons}>
-        {/* Create worktree button */}
-        <button
-          className={styles.addButton}
-          onClick={handleCreateWorktree}
-          title="Create worktree"
-          data-testid="create-worktree-sidebar-button"
-        >
-          <BranchIcon />
-          {sidebarExpanded && <span>New Worktree</span>}
-        </button>
+      {/* Add project button */}
+      <button
+        className={styles.addButton}
+        onClick={handleAddProject}
+        title="Add project"
+        data-testid="add-project-button"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <line x1="7" y1="3" x2="7" y2="11" />
+          <line x1="3" y1="7" x2="11" y2="7" />
+        </svg>
+        {sidebarExpanded && <span>Add Project</span>}
+      </button>
 
-        {/* Add project button */}
-        <button
-          className={styles.addButton}
-          onClick={handleAddProject}
-          title="Add project"
-          data-testid="add-project-button"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-            <line x1="7" y1="3" x2="7" y2="11" />
-            <line x1="3" y1="7" x2="11" y2="7" />
-          </svg>
-          {sidebarExpanded && <span>Add Project</span>}
-        </button>
-      </div>
+      {/* Context menu */}
+      {contextMenu && (
+        <ContextMenu
+          items={contextMenu.items}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   )
 }
