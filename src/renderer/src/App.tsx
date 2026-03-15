@@ -141,8 +141,8 @@ function App(): React.JSX.Element {
 
   return (
     <ThemeProvider>
-      <UpdateBanner />
       <Navbar />
+      <UpdateBanner />
       <AppShell>
         <KanbanBoard />
         <CommandPalette />
