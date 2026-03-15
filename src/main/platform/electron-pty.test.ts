@@ -113,6 +113,91 @@ describe('getShellEnv CLAUDECODE removal', () => {
   })
 })
 
+describe('getShellEnv UTF-8 locale', () => {
+  it('should set LANG and LC_ALL to en_US.UTF-8 when not already set', async () => {
+    delete process.env.LANG
+    delete process.env.LC_ALL
+
+    const pty = await import('node-pty')
+    const mockPty = {
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+      pid: 123
+    }
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockReturnValue(mockPty)
+
+    const mockTmux = createMockTmux()
+    const manager = new ElectronPtyManager(mockTmux)
+
+    await manager.create('test-task', 'pane-0', '/tmp')
+
+    const spawnCall = (pty.spawn as ReturnType<typeof vi.fn>).mock.calls[0]
+    const spawnEnv = spawnCall[2]?.env as Record<string, string>
+    expect(spawnEnv.LANG).toBe('en_US.UTF-8')
+    expect(spawnEnv.LC_ALL).toBe('en_US.UTF-8')
+  })
+
+  it('should preserve existing LANG and LC_ALL if already set', async () => {
+    process.env.LANG = 'de_DE.UTF-8'
+    process.env.LC_ALL = 'de_DE.UTF-8'
+
+    const pty = await import('node-pty')
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockClear()
+    const mockPty = {
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+      pid: 123
+    }
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockReturnValue(mockPty)
+
+    const mockTmux = createMockTmux()
+    const manager = new ElectronPtyManager(mockTmux)
+
+    await manager.create('test-task', 'pane-0', '/tmp')
+
+    const spawnCall = (pty.spawn as ReturnType<typeof vi.fn>).mock.calls[0]
+    const spawnEnv = spawnCall[2]?.env as Record<string, string>
+    expect(spawnEnv.LANG).toBe('de_DE.UTF-8')
+    expect(spawnEnv.LC_ALL).toBe('de_DE.UTF-8')
+
+    // Cleanup
+    delete process.env.LANG
+    delete process.env.LC_ALL
+  })
+})
+
+describe('tmux -u flag for UTF-8', () => {
+  it('should pass -u flag to tmux attach-session', async () => {
+    const pty = await import('node-pty')
+    const mockPty = {
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+      pid: 123
+    }
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockReturnValue(mockPty)
+
+    const mockTmux = createMockTmux()
+    const manager = new ElectronPtyManager(mockTmux)
+
+    await manager.create('test-task', 'pane-0', '/tmp')
+
+    const spawnCall = (pty.spawn as ReturnType<typeof vi.fn>).mock.calls[0]
+    // args should be [tmuxPath, ['-u', 'attach-session', '-t', sessionName], options]
+    const args = spawnCall[1] as string[]
+    expect(args[0]).toBe('-u')
+    expect(args[1]).toBe('attach-session')
+  })
+})
+
 describe('ElectronPtyManager inactivity detection', () => {
   let manager: ElectronPtyManager
   let mockTmux: ReturnType<typeof createMockTmux>

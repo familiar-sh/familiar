@@ -81,7 +81,9 @@ export class ElectronTmuxManager implements ITmuxManager {
   }
 
   async createSession(sessionName: string, cwd: string, env?: Record<string, string>): Promise<void> {
-    await this._exec(['new-session', '-d', '-s', sessionName, '-c', cwd])
+    // -u forces UTF-8 mode so Unicode characters render correctly even when
+    // Electron is launched from Finder with a minimal locale environment.
+    await this._exec(['-u', 'new-session', '-d', '-s', sessionName, '-c', cwd])
 
     // Enable extended keys so Shift+Enter, Ctrl+Enter etc. are forwarded to inner apps.
     // "always" sends unconditionally without the inner app needing to request them.

@@ -76,6 +76,16 @@ function getShellEnv(): Record<string, string> {
   // even when the Familiar app itself was started from a Claude Code session.
   delete env.CLAUDECODE
 
+  // Ensure UTF-8 locale is set. Electron launched from Finder/Dock inherits a
+  // minimal environment that may lack LANG/LC_ALL, causing Unicode characters
+  // (bullets, spinners, box-drawing) to not render in the terminal.
+  if (!env.LANG) {
+    env.LANG = 'en_US.UTF-8'
+  }
+  if (!env.LC_ALL) {
+    env.LC_ALL = 'en_US.UTF-8'
+  }
+
   return env
 }
 
@@ -266,7 +276,7 @@ export class ElectronPtyManager implements IPtyManager {
 
       // Spawn node-pty that attaches to the tmux session using full path
       try {
-        ptyProcess = pty.spawn(tmuxPath, ['attach-session', '-t', tmuxSessionName], {
+        ptyProcess = pty.spawn(tmuxPath, ['-u', 'attach-session', '-t', tmuxSessionName], {
           name: 'xterm-256color',
           cols: 80,
           rows: 24,
