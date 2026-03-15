@@ -60,6 +60,19 @@ familiar notify "Done" "Auth flow complete"
 familiar list --status in-progress --json
 ```
 
+## Worktree Hooks
+
+Familiar can run scripts automatically when [git worktrees](https://git-scm.com/docs/git-worktree) are created or deleted — useful for installing dependencies, setting up `.env` files, or cleaning up resources.
+
+Place hook scripts in `.familiar/hooks/`:
+
+| Hook | When it runs |
+|------|-------------|
+| `after-worktree-create.sh` | After a new worktree is created |
+| `pre-worktree-delete.sh` | Before a worktree is deleted |
+
+See [docs/WORKTREE_HOOKS.md](docs/WORKTREE_HOOKS.md) for environment variables and examples.
+
 ## Architecture
 
 ```
