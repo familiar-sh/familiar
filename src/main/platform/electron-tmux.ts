@@ -36,6 +36,8 @@ function findTmuxPath(): string {
 
 export class ElectronTmuxManager implements ITmuxManager {
   private _tmuxPath: string
+  /** Tracks sessions currently being warmed up to prevent duplicate warmups */
+  private _warmingUp = new Set<string>()
 
   constructor() {
     this._tmuxPath = findTmuxPath()
@@ -138,30 +140,39 @@ export class ElectronTmuxManager implements ITmuxManager {
     env?: Record<string, string>,
     command?: string
   ): Promise<void> {
-    // Wait for the shell to finish initializing (.zshrc, oh-my-zsh, etc.)
-    // before sending Ctrl-C. Shell frameworks can take 2-4 seconds to load;
-    // sending Ctrl-C too early interrupts .zshrc sourcing and leaves the
-    // shell without PATH, prompt theme, aliases, etc.
-    await this._delay(5000)
+    // Prevent duplicate concurrent warmups — both tmux:warmup IPC handler
+    // and ptyCreate() can trigger this for the same session.
+    if (this._warmingUp.has(sessionName)) return
+    this._warmingUp.add(sessionName)
 
-    // Dismiss any lingering interactive prompts (e.g. oh-my-zsh update)
-    await this._execTmux(['send-keys', '-t', sessionName, 'C-c'])
-    await this._delay(500)
+    try {
+      // Wait for the shell to finish initializing (.zshrc, oh-my-zsh, etc.)
+      // before sending Ctrl-C. Shell frameworks can take 2-4 seconds to load;
+      // sending Ctrl-C too early interrupts .zshrc sourcing and leaves the
+      // shell without PATH, prompt theme, aliases, etc.
+      await this._delay(5000)
 
-    // Export env vars into the running shell (env vars were already set via
-    // tmux new-session -e, but re-export ensures they're in the shell process)
-    if (env) {
-      for (const [key, value] of Object.entries(env)) {
-        await this._exec(['send-keys', '-t', sessionName, `export ${key}="${value}"`, 'Enter'])
+      // Dismiss any lingering interactive prompts (e.g. oh-my-zsh update)
+      await this._execTmux(['send-keys', '-t', sessionName, 'C-c'])
+      await this._delay(500)
+
+      // Export env vars into the running shell (env vars were already set via
+      // tmux new-session -e, but re-export ensures they're in the shell process)
+      if (env) {
+        for (const [key, value] of Object.entries(env)) {
+          await this._exec(['send-keys', '-t', sessionName, `export ${key}="${value}"`, 'Enter'])
+        }
       }
-    }
 
-    // Clear the screen
-    await this._exec(['send-keys', '-t', sessionName, 'clear', 'Enter'])
+      // Clear the screen
+      await this._exec(['send-keys', '-t', sessionName, 'clear', 'Enter'])
 
-    // Run the initial command if provided
-    if (command) {
-      await this._exec(['send-keys', '-t', sessionName, command, 'Enter'])
+      // Run the initial command if provided
+      if (command) {
+        await this._exec(['send-keys', '-t', sessionName, command, 'Enter'])
+      }
+    } finally {
+      this._warmingUp.delete(sessionName)
     }
   }
 
