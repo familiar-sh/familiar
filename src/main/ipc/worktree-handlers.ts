@@ -14,6 +14,11 @@ export function registerWorktreeHandlers(dataService: DataService): void {
     return WorktreeService.createWorktree(projectRoot, customSlug)
   })
 
+  ipcMain.handle('worktree:rename', async (_, worktreePath: string, newSlug: string): Promise<WorktreeInfo> => {
+    const projectRoot = dataService.getProjectRoot()
+    return WorktreeService.renameWorktree(projectRoot, worktreePath, newSlug)
+  })
+
   ipcMain.handle('worktree:remove', async (_, worktreePath: string): Promise<void> => {
     const projectRoot = dataService.getProjectRoot()
     WorktreeService.removeWorktree(projectRoot, worktreePath)

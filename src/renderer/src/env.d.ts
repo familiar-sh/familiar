@@ -136,6 +136,7 @@ declare global {
       // Worktree
       worktreeList(): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]>
       worktreeCreate(customSlug?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }>
+      worktreeRename(worktreePath: string, newSlug: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }>
       worktreeRemove(worktreePath: string): Promise<void>
       worktreeGetGitRoot(): Promise<string | null>
 

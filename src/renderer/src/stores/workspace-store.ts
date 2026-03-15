@@ -55,6 +55,7 @@ interface WorkspaceState {
   // Worktree actions
   loadWorktrees: () => Promise<void>
   createWorktree: (customSlug?: string) => Promise<WorktreeInfo>
+  renameWorktree: (worktreePath: string, newSlug: string) => Promise<WorktreeInfo>
   removeWorktree: (worktreePath: string) => Promise<void>
 
   createWorkspace: (name: string, paths: string[]) => Promise<Workspace>
@@ -236,6 +237,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const { loadWorktrees } = get()
     await loadWorktrees()
     return worktree
+  },
+
+  renameWorktree: async (worktreePath: string, newSlug: string): Promise<WorktreeInfo> => {
+    const result = await window.api.worktreeRename(worktreePath, newSlug)
+    // If the renamed worktree was open as a project, update the workspace
+    const { openProjects, loadWorktrees } = get()
+    if (openProjects.some((p) => p.path === worktreePath)) {
+      // Remove old path, add new path
+      await window.api.workspaceRemoveProject(worktreePath)
+      await window.api.workspaceAddProject(result.path)
+    }
+    const { loadOpenProjects } = get()
+    await loadOpenProjects()
+    return result
   },
 
   removeWorktree: async (worktreePath: string): Promise<void> => {

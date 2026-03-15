@@ -176,6 +176,66 @@ export class WorktreeService {
   }
 
   /**
+   * Rename a worktree by moving its directory and renaming its branch.
+   * Returns the updated worktree info.
+   */
+  static renameWorktree(projectPath: string, worktreePath: string, newSlug: string): WorktreeInfo {
+    const gitRoot = this.getGitRoot(projectPath)
+    if (!gitRoot) throw new Error('Not a git repository')
+
+    const worktrees = this.listWorktrees(projectPath)
+    const wt = worktrees.find((w) => w.path === worktreePath)
+    if (!wt) throw new Error('Worktree not found')
+
+    const newBranchName = `familiar-worktree/${newSlug}`
+    const worktreesDir = path.join(gitRoot, '.familiar', 'worktrees')
+    const newWorktreePath = path.join(worktreesDir, newSlug)
+
+    if (fs.existsSync(newWorktreePath)) {
+      throw new Error(`A worktree named "${newSlug}" already exists`)
+    }
+
+    // Move the worktree directory
+    execSync(`git worktree move "${worktreePath}" "${newWorktreePath}"`, {
+      cwd: gitRoot,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+
+    // Rename the branch
+    if (wt.branch && wt.branch.startsWith('familiar-worktree/')) {
+      try {
+        execSync(`git branch -m "${wt.branch}" "${newBranchName}"`, {
+          cwd: gitRoot,
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        })
+      } catch {
+        // Branch rename failed — worktree still moved successfully
+      }
+    }
+
+    // Update the project name in the worktree's state.json
+    const stateFile = path.join(newWorktreePath, '.familiar', 'state.json')
+    if (fs.existsSync(stateFile)) {
+      try {
+        const state = JSON.parse(fs.readFileSync(stateFile, 'utf-8'))
+        state.projectName = newSlug
+        fs.writeFileSync(stateFile, JSON.stringify(state, null, 2))
+      } catch {
+        // Non-critical — continue
+      }
+    }
+
+    return {
+      path: newWorktreePath,
+      branch: newBranchName,
+      slug: newSlug,
+      isMain: false
+    }
+  }
+
+  /**
    * Remove a worktree.
    */
   static removeWorktree(projectPath: string, worktreePath: string): void {

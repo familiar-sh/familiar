@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
@@ -40,6 +40,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const toggleSidebar = useWorkspaceStore((s) => s.toggleSidebar)
   const loadWorktrees = useWorkspaceStore((s) => s.loadWorktrees)
   const createWorktree = useWorkspaceStore((s) => s.createWorktree)
+  const renameWorktree = useWorkspaceStore((s) => s.renameWorktree)
   const removeWorktree = useWorkspaceStore((s) => s.removeWorktree)
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
   const loadNotifications = useNotificationStore((s) => s.loadNotifications)
@@ -54,6 +55,14 @@ export function ProjectSidebar(): React.JSX.Element | null {
     items: ContextMenuItem[]
   } | null>(null)
 
+  // Rename dialog state
+  const [renameDialog, setRenameDialog] = useState<{
+    worktreePath: string
+    currentSlug: string
+  } | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
+
   // Close context menu on click outside
   useEffect(() => {
     if (!contextMenu) return
@@ -61,6 +70,16 @@ export function ProjectSidebar(): React.JSX.Element | null {
     window.addEventListener('click', handleClick)
     return () => window.removeEventListener('click', handleClick)
   }, [contextMenu])
+
+  // Focus rename input when dialog opens
+  useEffect(() => {
+    if (renameDialog) {
+      setTimeout(() => {
+        renameInputRef.current?.focus()
+        renameInputRef.current?.select()
+      }, 0)
+    }
+  }, [renameDialog])
 
   if (!sidebarVisible) return null
 
@@ -120,6 +139,41 @@ export function ProjectSidebar(): React.JSX.Element | null {
     }
   }
 
+  const handleOpenRenameDialog = (worktreePath: string, currentSlug: string): void => {
+    setRenameValue(currentSlug)
+    setRenameDialog({ worktreePath, currentSlug })
+  }
+
+  const handleRenameConfirm = useCallback(async (): Promise<void> => {
+    if (!renameDialog) return
+    const trimmed = renameValue.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')
+    if (!trimmed || trimmed === renameDialog.currentSlug) {
+      setRenameDialog(null)
+      return
+    }
+    try {
+      await renameWorktree(renameDialog.worktreePath, trimmed)
+    } catch (err) {
+      console.error('Failed to rename worktree:', err)
+    }
+    setRenameDialog(null)
+  }, [renameDialog, renameValue, renameWorktree])
+
+  const handleRenameCancel = useCallback((): void => {
+    setRenameDialog(null)
+  }, [])
+
+  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleRenameConfirm()
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      handleRenameCancel()
+    }
+  }, [handleRenameConfirm, handleRenameCancel])
+
   const handleProjectContextMenu = (e: React.MouseEvent, projectPath: string): void => {
     e.preventDefault()
     e.stopPropagation()
@@ -151,11 +205,15 @@ export function ProjectSidebar(): React.JSX.Element | null {
     setContextMenu({ position: { x: e.clientX, y: e.clientY }, items })
   }
 
-  const handleWorktreeContextMenu = (e: React.MouseEvent, worktreePath: string): void => {
+  const handleWorktreeContextMenu = (e: React.MouseEvent, worktreePath: string, slug: string): void => {
     e.preventDefault()
     e.stopPropagation()
 
     const items: ContextMenuItem[] = [
+      {
+        label: 'Rename Worktree',
+        onClick: () => handleOpenRenameDialog(worktreePath, slug)
+      },
       {
         label: 'Open in Finder',
         onClick: () => window.api.openPath(worktreePath)
@@ -258,7 +316,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
                     key={wt.path}
                     className={`${styles.worktreeItem} ${isWtActive ? styles.projectItemActive : ''}`}
                     onClick={() => handleOpenWorktree(wt.path)}
-                    onContextMenu={(e) => handleWorktreeContextMenu(e, wt.path)}
+                    onContextMenu={(e) => handleWorktreeContextMenu(e, wt.path, wt.slug)}
                     title={`${wt.branch}\n${wt.path}`}
                     data-testid={`worktree-item-${wt.slug}`}
                   >
@@ -315,6 +373,127 @@ export function ProjectSidebar(): React.JSX.Element | null {
           onClose={() => setContextMenu(null)}
         />
       )}
+
+      {/* Rename dialog */}
+      {renameDialog && (
+        <div style={dialogStyles.overlay} onClick={(e) => { if (e.target === e.currentTarget) handleRenameCancel() }}>
+          <div style={dialogStyles.wrapper}>
+            <div style={dialogStyles.header}>Rename Worktree</div>
+            <div style={dialogStyles.body}>
+              <label style={dialogStyles.label}>New name</label>
+              <input
+                ref={renameInputRef}
+                style={dialogStyles.input}
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={handleRenameKeyDown}
+                placeholder="e.g. fuzzy-otter"
+              />
+            </div>
+            <div style={dialogStyles.footer}>
+              <button style={dialogStyles.cancelButton} onClick={handleRenameCancel}>
+                Cancel
+              </button>
+              <button
+                style={{
+                  ...dialogStyles.confirmButton,
+                  opacity: renameValue.trim() ? 1 : 0.5
+                }}
+                onClick={handleRenameConfirm}
+                disabled={!renameValue.trim()}
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+const dialogStyles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingTop: '20vh',
+    zIndex: 600,
+    animation: 'cmdkFadeIn 120ms ease'
+  },
+  wrapper: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 8,
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    boxShadow: 'var(--shadow-lg)',
+    overflow: 'hidden'
+  },
+  header: {
+    padding: '12px 18px',
+    fontSize: 13,
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+    borderBottom: '1px solid var(--border)',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  body: {
+    padding: '16px 18px'
+  },
+  label: {
+    display: 'block',
+    fontSize: 12,
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+    marginBottom: 6,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  input: {
+    width: '100%',
+    padding: '8px 12px',
+    fontSize: 14,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    color: 'var(--text-primary)',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: 6,
+    outline: 'none',
+    boxSizing: 'border-box' as const
+  },
+  footer: {
+    padding: '12px 18px',
+    borderTop: '1px solid var(--border)',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 8
+  },
+  cancelButton: {
+    padding: '6px 14px',
+    fontSize: 13,
+    fontWeight: 500,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    color: 'var(--text-secondary)',
+    backgroundColor: 'transparent',
+    border: '1px solid var(--border)',
+    borderRadius: 6,
+    cursor: 'pointer'
+  },
+  confirmButton: {
+    padding: '6px 14px',
+    fontSize: 13,
+    fontWeight: 500,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    color: '#fff',
+    backgroundColor: 'var(--accent)',
+    border: '1px solid var(--accent)',
+    borderRadius: 6,
+    cursor: 'pointer'
+  }
 }

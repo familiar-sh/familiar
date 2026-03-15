@@ -221,6 +221,8 @@ const api = {
     ipcRenderer.invoke('worktree:list'),
   worktreeCreate: (customSlug?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }> =>
     ipcRenderer.invoke('worktree:create', customSlug),
+  worktreeRename: (worktreePath: string, newSlug: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }> =>
+    ipcRenderer.invoke('worktree:rename', worktreePath, newSlug),
   worktreeRemove: (worktreePath: string): Promise<void> =>
     ipcRenderer.invoke('worktree:remove', worktreePath),
   worktreeGetGitRoot: (): Promise<string | null> =>

@@ -164,6 +164,47 @@ describe('WorktreeService', () => {
     })
   })
 
+  describe('renameWorktree', () => {
+    it('renames worktree directory and branch', () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'old-name')
+      const result = WorktreeService.renameWorktree(gitRoot, wt.path, 'new-name')
+
+      expect(result.slug).toBe('new-name')
+      expect(result.branch).toBe('familiar-worktree/new-name')
+      expect(result.path).toContain('new-name')
+      expect(fs.existsSync(result.path)).toBe(true)
+      expect(fs.existsSync(wt.path)).toBe(false)
+    })
+
+    it('updates state.json project name', () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'state-rename')
+      const result = WorktreeService.renameWorktree(gitRoot, wt.path, 'renamed-state')
+
+      const stateFile = path.join(result.path, '.familiar', 'state.json')
+      const state = JSON.parse(fs.readFileSync(stateFile, 'utf-8'))
+      expect(state.projectName).toBe('renamed-state')
+    })
+
+    it('throws when target name already exists', () => {
+      WorktreeService.createWorktree(gitRoot, 'existing')
+      const wt = WorktreeService.createWorktree(gitRoot, 'to-rename')
+
+      expect(() => WorktreeService.renameWorktree(gitRoot, wt.path, 'existing')).toThrow(
+        'already exists'
+      )
+    })
+
+    it('appears in worktree list with new name after rename', () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'before')
+      WorktreeService.renameWorktree(gitRoot, wt.path, 'after')
+
+      const worktrees = WorktreeService.listWorktrees(gitRoot)
+      const names = worktrees.map((w) => w.branch)
+      expect(names).toContain('familiar-worktree/after')
+      expect(names).not.toContain('familiar-worktree/before')
+    })
+  })
+
   describe('ensureGitignore', () => {
     it('does not duplicate worktrees/ entry', () => {
       // Create two worktrees — each call to createWorktree calls ensureGitignore
