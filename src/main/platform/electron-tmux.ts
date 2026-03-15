@@ -86,26 +86,31 @@ export class ElectronTmuxManager implements ITmuxManager {
     // /bin/bash rather than the user's login shell, so we must set it explicitly.
     const userShell = process.env.SHELL || '/bin/zsh'
 
-    // Set default-shell before creating the session so that the initial window
-    // (and any future windows/panes) use the user's login shell. This is a
-    // server-global option, but setting it to the user's actual $SHELL is safe.
-    try {
-      await this._execTmux(['set-option', '-g', 'default-shell', userShell])
-    } catch {
-      // Non-fatal — tmux will use its compiled-in default
-    }
-
     // Build the new-session command. Use -e flags to inject env vars into the
     // initial window's environment so they're available when .zshrc/.bashrc loads.
     // This is critical because set-environment only affects NEW windows/panes,
     // not the shell already running in the first window.
+    //
+    // -u forces UTF-8 mode so Unicode characters render correctly even when
+    // Electron is launched from Finder with a minimal locale environment.
+    //
+    // The user's shell is passed as the shell-command argument so the first
+    // window always runs the correct shell. Without this, tmux uses its
+    // compiled-in default-shell (often /bin/bash on macOS), especially when
+    // no tmux server is running yet (set-option -g default-shell fails if
+    // there's no server to connect to).
     const args = ['-u', 'new-session', '-d', '-s', sessionName, '-c', cwd]
     if (env) {
       for (const [key, value] of Object.entries(env)) {
         args.push('-e', `${key}=${value}`)
       }
     }
+    args.push(userShell)
     await this._exec(args)
+
+    // Now that the server is running, set default-shell globally so any
+    // future windows/panes also use the user's shell.
+    await this._execTmux(['set-option', '-g', 'default-shell', userShell])
 
     // Enable extended keys so Shift+Enter, Ctrl+Enter etc. are forwarded to inner apps.
     // "always" sends unconditionally without the inner app needing to request them.
@@ -141,6 +146,7 @@ export class ElectronTmuxManager implements ITmuxManager {
 
     // Dismiss any lingering interactive prompts (e.g. oh-my-zsh update)
     await this._execTmux(['send-keys', '-t', sessionName, 'C-c'])
+    await this._delay(500)
 
     // Export env vars into the running shell (env vars were already set via
     // tmux new-session -e, but re-export ensures they're in the shell process)
