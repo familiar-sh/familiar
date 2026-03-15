@@ -28,14 +28,17 @@ export function WorkspaceHealthBanner(): React.JSX.Element | null {
   const [cliShell, setCliShell] = useState('')
   const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
 
-  const runChecks = useCallback(async () => {
+  const runChecks = useCallback(async (excludeIssueIds?: string[]) => {
     setState('checking')
     try {
       const result: HealthCheckResult = await window.api.healthCheck()
-      if (result.issues.length === 0) {
+      const filteredIssues = excludeIssueIds
+        ? result.issues.filter((i) => !excludeIssueIds.includes(i.id))
+        : result.issues
+      if (filteredIssues.length === 0) {
         setState('healthy')
       } else {
-        setIssues(result.issues)
+        setIssues(filteredIssues)
         setState('issues')
       }
     } catch {
@@ -50,6 +53,7 @@ export function WorkspaceHealthBanner(): React.JSX.Element | null {
 
   const handleFixAll = useCallback(async () => {
     setState('fixing')
+    const excludeFromRecheck: string[] = []
 
     // Handle CLI install separately
     const cliIssue = issues.find((i) => i.id === 'cli-not-installed')
@@ -59,6 +63,9 @@ export function WorkspaceHealthBanner(): React.JSX.Element | null {
         const result = await window.api.cliInstallToPath()
         if (result.success) {
           setCliShell(result.shell)
+          // CLI was installed successfully — exclude from re-check since the
+          // Electron process may not detect it until the next app launch
+          excludeFromRecheck.push('cli-not-installed')
         }
       } catch {
         // Continue fixing other issues
@@ -69,8 +76,8 @@ export function WorkspaceHealthBanner(): React.JSX.Element | null {
     // Fix remaining auto-fixable issues
     await window.api.healthFixAll()
 
-    // Re-run checks
-    await runChecks()
+    // Re-run checks, excluding successfully fixed CLI issue
+    await runChecks(excludeFromRecheck)
   }, [issues, runChecks])
 
   const handleFix = useCallback(
@@ -81,6 +88,11 @@ export function WorkspaceHealthBanner(): React.JSX.Element | null {
           const result = await window.api.cliInstallToPath()
           if (result.success) {
             setCliShell(result.shell)
+            // CLI was installed successfully — exclude from re-check since the
+            // Electron process may not detect it until the next app launch
+            setFixingCli(false)
+            await runChecks(['cli-not-installed'])
+            return
           }
         } catch {
           // ignore
@@ -145,8 +157,7 @@ export function WorkspaceHealthBanner(): React.JSX.Element | null {
         </ul>
         {cliShell && (
           <div className={styles.cliSuccess}>
-            CLI installed. Restart your {cliShell} terminal or run{' '}
-            <code>source ~/.{cliShell}rc</code>.
+            CLI installed successfully.
           </div>
         )}
       </div>

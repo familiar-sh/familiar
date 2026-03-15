@@ -51,7 +51,7 @@ export function CliSetupBanner(): React.JSX.Element | null {
         <div className={styles.content}>
           <div className={styles.title}>CLI installed</div>
           <div className={styles.description}>
-            Restart your {shellName} terminal or run <code>source ~/.{shellName}rc</code> to start using <code>familiar</code>.
+            The <code>familiar</code> CLI is now available in new terminal sessions.
           </div>
         </div>
         <div className={styles.actions}>
