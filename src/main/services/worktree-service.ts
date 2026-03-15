@@ -268,19 +268,46 @@ export class WorktreeService {
   }
 
   /**
-   * Run the after-worktree-create hook if it exists.
-   * The hook runs in the new worktree directory with the provided env variables.
-   * Returns a promise that resolves when the hook finishes (or immediately if no hook exists).
+   * Get the built-in environment variables for worktree hooks.
+   * Includes main/worktree dirs, names, and branch info.
    */
-  static async runPostCreateHook(
-    projectPath: string,
-    worktreePath: string,
+  private static getHookBuiltinEnv(
+    gitRoot: string,
+    worktreePath: string
+  ): Record<string, string> {
+    const worktrees = this.listWorktrees(gitRoot)
+    const mainWt = worktrees.find((w) => w.isMain)
+    const targetWt = worktrees.find((w) => w.path === worktreePath)
+
+    // Read main project name from state.json
+    let mainProjectName = path.basename(gitRoot)
+    try {
+      const mainState = path.join(gitRoot, '.familiar', 'state.json')
+      if (fs.existsSync(mainState)) {
+        const state = JSON.parse(fs.readFileSync(mainState, 'utf-8'))
+        if (state.projectName) mainProjectName = state.projectName
+      }
+    } catch { /* use fallback */ }
+
+    return {
+      MAIN_WORKTREE_DIR: gitRoot,
+      NEW_WORKTREE_DIR: worktreePath,
+      WORKTREE_NAME: targetWt?.slug || path.basename(worktreePath),
+      WORKTREE_BRANCH: targetWt?.branch || '',
+      ORIGINAL_BRANCH: mainWt?.branch || '',
+      ORIGINAL_PROJECT_NAME: mainProjectName
+    }
+  }
+
+  /**
+   * Run a hook script if it exists.
+   * The hook runs in the specified working directory with the provided env variables.
+   */
+  private static async runHook(
+    hookPath: string,
+    cwd: string,
     envVars: Record<string, string>
   ): Promise<{ ran: boolean; exitCode: number | null; output: string }> {
-    const gitRoot = this.getGitRoot(projectPath)
-    if (!gitRoot) return { ran: false, exitCode: null, output: '' }
-
-    const hookPath = path.join(gitRoot, '.familiar', 'hooks', 'after-worktree-create.sh')
     if (!fs.existsSync(hookPath)) {
       return { ran: false, exitCode: null, output: '' }
     }
@@ -292,17 +319,12 @@ export class WorktreeService {
       // Non-critical
     }
 
-    const env = {
-      ...process.env,
-      MAIN_WORKTREE_DIR: gitRoot,
-      NEW_WORKTREE_DIR: worktreePath,
-      ...envVars
-    }
+    const env = { ...process.env, ...envVars }
 
     return new Promise((resolve) => {
       let output = ''
       const child = spawn('/bin/bash', [hookPath], {
-        cwd: worktreePath,
+        cwd,
         env,
         stdio: ['pipe', 'pipe', 'pipe']
       })
@@ -325,6 +347,42 @@ export class WorktreeService {
   }
 
   /**
+   * Run the after-worktree-create hook if it exists.
+   * The hook runs in the new worktree directory with built-in + user env variables.
+   */
+  static async runPostCreateHook(
+    projectPath: string,
+    worktreePath: string,
+    envVars: Record<string, string>
+  ): Promise<{ ran: boolean; exitCode: number | null; output: string }> {
+    const gitRoot = this.getGitRoot(projectPath)
+    if (!gitRoot) return { ran: false, exitCode: null, output: '' }
+
+    const hookPath = path.join(gitRoot, '.familiar', 'hooks', 'after-worktree-create.sh')
+    const builtinEnv = this.getHookBuiltinEnv(gitRoot, worktreePath)
+
+    return this.runHook(hookPath, worktreePath, { ...builtinEnv, ...envVars })
+  }
+
+  /**
+   * Run the pre-worktree-delete hook if it exists.
+   * The hook runs in the worktree directory before deletion with built-in + user env variables.
+   */
+  static async runPreDeleteHook(
+    projectPath: string,
+    worktreePath: string,
+    envVars: Record<string, string> = {}
+  ): Promise<{ ran: boolean; exitCode: number | null; output: string }> {
+    const gitRoot = this.getGitRoot(projectPath)
+    if (!gitRoot) return { ran: false, exitCode: null, output: '' }
+
+    const hookPath = path.join(gitRoot, '.familiar', 'hooks', 'pre-worktree-delete.sh')
+    const builtinEnv = this.getHookBuiltinEnv(gitRoot, worktreePath)
+
+    return this.runHook(hookPath, worktreePath, { ...builtinEnv, ...envVars })
+  }
+
+  /**
    * Get the path where the after-worktree-create hook should be placed.
    */
   static getHookPath(projectPath: string): string | null {
@@ -334,12 +392,30 @@ export class WorktreeService {
   }
 
   /**
+   * Get the path where the pre-worktree-delete hook should be placed.
+   */
+  static getPreDeleteHookPath(projectPath: string): string | null {
+    const gitRoot = this.getGitRoot(projectPath)
+    if (!gitRoot) return null
+    return path.join(gitRoot, '.familiar', 'hooks', 'pre-worktree-delete.sh')
+  }
+
+  /**
    * Check if the after-worktree-create hook exists.
    */
   static hookExists(projectPath: string): boolean {
     const hookPath = this.getHookPath(projectPath)
     if (!hookPath) return false
     return fs.existsSync(hookPath)
+  }
+
+  /**
+   * Check if the pre-worktree-delete hook exists.
+   */
+  static preDeleteHookExists(projectPath: string): boolean {
+    const p = this.getPreDeleteHookPath(projectPath)
+    if (!p) return false
+    return fs.existsSync(p)
   }
 
   /**

@@ -244,6 +244,15 @@ const api = {
     ipcRenderer.invoke('worktree:get-hook-path'),
   worktreeHookExists: (): Promise<boolean> =>
     ipcRenderer.invoke('worktree:hook-exists'),
+  worktreeRunPreDeleteHook: (
+    worktreePath: string,
+    envVars: Record<string, string>
+  ): Promise<{ ran: boolean; exitCode: number | null; output: string }> =>
+    ipcRenderer.invoke('worktree:run-pre-delete-hook', worktreePath, envVars),
+  worktreeGetPreDeleteHookPath: (): Promise<string | null> =>
+    ipcRenderer.invoke('worktree:get-pre-delete-hook-path'),
+  worktreePreDeleteHookExists: (): Promise<boolean> =>
+    ipcRenderer.invoke('worktree:pre-delete-hook-exists'),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),

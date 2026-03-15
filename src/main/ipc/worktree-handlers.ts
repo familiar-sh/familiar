@@ -50,4 +50,26 @@ export function registerWorktreeHandlers(dataService: DataService): void {
     const projectRoot = dataService.getProjectRoot()
     return WorktreeService.hookExists(projectRoot)
   })
+
+  ipcMain.handle(
+    'worktree:run-pre-delete-hook',
+    async (
+      _,
+      worktreePath: string,
+      envVars: Record<string, string>
+    ): Promise<{ ran: boolean; exitCode: number | null; output: string }> => {
+      const projectRoot = dataService.getProjectRoot()
+      return WorktreeService.runPreDeleteHook(projectRoot, worktreePath, envVars)
+    }
+  )
+
+  ipcMain.handle('worktree:get-pre-delete-hook-path', async (): Promise<string | null> => {
+    const projectRoot = dataService.getProjectRoot()
+    return WorktreeService.getPreDeleteHookPath(projectRoot)
+  })
+
+  ipcMain.handle('worktree:pre-delete-hook-exists', async (): Promise<boolean> => {
+    const projectRoot = dataService.getProjectRoot()
+    return WorktreeService.preDeleteHookExists(projectRoot)
+  })
 }

@@ -251,6 +251,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const handleRemoveWorktree = async (worktreePath: string): Promise<void> => {
     if (!confirm('Remove this worktree? This will delete the worktree directory and its branch.')) return
     try {
+      // Run pre-delete hook before removing
+      await window.api.worktreeRunPreDeleteHook(worktreePath, {})
       await removeWorktree(worktreePath)
     } catch (err) {
       console.error('Failed to remove worktree:', err)
@@ -535,20 +537,24 @@ export function ProjectSidebar(): React.JSX.Element | null {
               <div style={createDialogStyles.envSection}>
                 <div style={{ ...dialogStyles.label, marginBottom: 8, marginTop: 16 }}>
                   Environment Variables
-                  <span style={createDialogStyles.envHint}> — passed to the post-create hook</span>
+                  <span style={createDialogStyles.envHint}> — passed to worktree hooks</span>
                 </div>
 
                 {/* Built-in vars (non-removable) */}
-                <div style={createDialogStyles.envRow}>
-                  <input style={{ ...createDialogStyles.envName, opacity: 0.6 }} value="MAIN_WORKTREE_DIR" disabled />
-                  <input style={{ ...createDialogStyles.envValue, opacity: 0.6 }} value="(auto: main project path)" disabled />
-                  <div style={createDialogStyles.envRemoveSpacer} />
-                </div>
-                <div style={createDialogStyles.envRow}>
-                  <input style={{ ...createDialogStyles.envName, opacity: 0.6 }} value="NEW_WORKTREE_DIR" disabled />
-                  <input style={{ ...createDialogStyles.envValue, opacity: 0.6 }} value="(auto: new worktree path)" disabled />
-                  <div style={createDialogStyles.envRemoveSpacer} />
-                </div>
+                {[
+                  ['MAIN_WORKTREE_DIR', 'main project path'],
+                  ['NEW_WORKTREE_DIR', 'target worktree path'],
+                  ['WORKTREE_NAME', 'worktree slug name'],
+                  ['WORKTREE_BRANCH', 'worktree git branch'],
+                  ['ORIGINAL_BRANCH', 'main worktree branch'],
+                  ['ORIGINAL_PROJECT_NAME', 'main project name']
+                ].map(([name, desc]) => (
+                  <div key={name} style={createDialogStyles.envRow}>
+                    <input style={{ ...createDialogStyles.envName, opacity: 0.6 }} value={name} disabled />
+                    <input style={{ ...createDialogStyles.envValue, opacity: 0.6 }} value={`(auto: ${desc})`} disabled />
+                    <div style={createDialogStyles.envRemoveSpacer} />
+                  </div>
+                ))}
 
                 {/* User-defined env vars */}
                 {createEnvVars.map((v, i) => (

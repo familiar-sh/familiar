@@ -17,7 +17,10 @@ vi.mock('../services/worktree-service', () => ({
     getGitRoot: vi.fn(),
     runPostCreateHook: vi.fn(),
     getHookPath: vi.fn(),
-    hookExists: vi.fn()
+    hookExists: vi.fn(),
+    runPreDeleteHook: vi.fn(),
+    getPreDeleteHookPath: vi.fn(),
+    preDeleteHookExists: vi.fn()
   }
 }))
 
@@ -45,6 +48,9 @@ describe('worktree-handlers', () => {
     expect(handlers['worktree:run-post-create-hook']).toBeDefined()
     expect(handlers['worktree:get-hook-path']).toBeDefined()
     expect(handlers['worktree:hook-exists']).toBeDefined()
+    expect(handlers['worktree:run-pre-delete-hook']).toBeDefined()
+    expect(handlers['worktree:get-pre-delete-hook-path']).toBeDefined()
+    expect(handlers['worktree:pre-delete-hook-exists']).toBeDefined()
   })
 
   it('worktree:list calls WorktreeService.listWorktrees with project root', async () => {
@@ -110,5 +116,31 @@ describe('worktree-handlers', () => {
     const result = await handlers['worktree:hook-exists']()
     expect(WorktreeService.hookExists).toHaveBeenCalledWith('/test/project')
     expect(result).toBe(true)
+  })
+
+  it('worktree:run-pre-delete-hook calls WorktreeService.runPreDeleteHook', async () => {
+    const mockResult = { ran: true, exitCode: 0, output: 'cleaned up' }
+    ;(WorktreeService.runPreDeleteHook as any).mockResolvedValue(mockResult)
+
+    const envVars = { CLEANUP: 'true' }
+    const result = await handlers['worktree:run-pre-delete-hook']({}, '/some/worktree', envVars)
+    expect(WorktreeService.runPreDeleteHook).toHaveBeenCalledWith('/test/project', '/some/worktree', envVars)
+    expect(result).toEqual(mockResult)
+  })
+
+  it('worktree:get-pre-delete-hook-path calls WorktreeService.getPreDeleteHookPath', async () => {
+    ;(WorktreeService.getPreDeleteHookPath as any).mockReturnValue('/test/project/.familiar/hooks/pre-worktree-delete.sh')
+
+    const result = await handlers['worktree:get-pre-delete-hook-path']()
+    expect(WorktreeService.getPreDeleteHookPath).toHaveBeenCalledWith('/test/project')
+    expect(result).toBe('/test/project/.familiar/hooks/pre-worktree-delete.sh')
+  })
+
+  it('worktree:pre-delete-hook-exists calls WorktreeService.preDeleteHookExists', async () => {
+    ;(WorktreeService.preDeleteHookExists as any).mockReturnValue(false)
+
+    const result = await handlers['worktree:pre-delete-hook-exists']()
+    expect(WorktreeService.preDeleteHookExists).toHaveBeenCalledWith('/test/project')
+    expect(result).toBe(false)
   })
 })

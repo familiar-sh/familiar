@@ -303,6 +303,106 @@ describe('WorktreeService', () => {
       expect(result.ran).toBe(true)
       expect(result.exitCode).toBe(1)
     })
+
+    it('passes all built-in env vars including name, branch, and project info', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'builtin-env')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(hooksDir, 'after-worktree-create.sh'),
+        '#!/bin/bash\necho "name=$WORKTREE_NAME branch=$WORKTREE_BRANCH orig_branch=$ORIGINAL_BRANCH proj=$ORIGINAL_PROJECT_NAME"'
+      )
+
+      const result = await WorktreeService.runPostCreateHook(gitRoot, wt.path, {})
+      expect(result.ran).toBe(true)
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('name=builtin-env')
+      expect(result.output).toContain('branch=familiar-worktree/builtin-env')
+      expect(result.output).toContain('proj=')
+    })
+  })
+
+  describe('getPreDeleteHookPath', () => {
+    it('returns the pre-delete hook path for a git repo', () => {
+      const hookPath = WorktreeService.getPreDeleteHookPath(gitRoot)
+      expect(hookPath).toBe(path.join(gitRoot, '.familiar', 'hooks', 'pre-worktree-delete.sh'))
+    })
+
+    it('returns null for non-git directory', () => {
+      const nonGitDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'non-git-')))
+      try {
+        expect(WorktreeService.getPreDeleteHookPath(nonGitDir)).toBeNull()
+      } finally {
+        fs.rmSync(nonGitDir, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('preDeleteHookExists', () => {
+    it('returns false when hook does not exist', () => {
+      expect(WorktreeService.preDeleteHookExists(gitRoot)).toBe(false)
+    })
+
+    it('returns true when hook file exists', () => {
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(path.join(hooksDir, 'pre-worktree-delete.sh'), '#!/bin/bash\n# noop')
+      expect(WorktreeService.preDeleteHookExists(gitRoot)).toBe(true)
+    })
+  })
+
+  describe('runPreDeleteHook', () => {
+    it('returns ran=false when hook does not exist', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'no-pre-hook')
+      const result = await WorktreeService.runPreDeleteHook(gitRoot, wt.path)
+      expect(result.ran).toBe(false)
+      expect(result.exitCode).toBeNull()
+    })
+
+    it('runs the pre-delete hook and returns output', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'pre-del')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(hooksDir, 'pre-worktree-delete.sh'),
+        '#!/bin/bash\necho "cleaning up $WORKTREE_NAME"'
+      )
+
+      const result = await WorktreeService.runPreDeleteHook(gitRoot, wt.path)
+      expect(result.ran).toBe(true)
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('cleaning up pre-del')
+    })
+
+    it('passes all built-in env vars to pre-delete hook', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'pre-del-env')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(hooksDir, 'pre-worktree-delete.sh'),
+        '#!/bin/bash\necho "main=$MAIN_WORKTREE_DIR wt=$NEW_WORKTREE_DIR name=$WORKTREE_NAME"'
+      )
+
+      const result = await WorktreeService.runPreDeleteHook(gitRoot, wt.path)
+      expect(result.ran).toBe(true)
+      expect(result.output).toContain(`main=${gitRoot}`)
+      expect(result.output).toContain(`wt=${wt.path}`)
+      expect(result.output).toContain('name=pre-del-env')
+    })
+
+    it('runs in the worktree directory', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'pre-del-cwd')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(hooksDir, 'pre-worktree-delete.sh'),
+        '#!/bin/bash\npwd'
+      )
+
+      const result = await WorktreeService.runPreDeleteHook(gitRoot, wt.path)
+      expect(result.ran).toBe(true)
+      expect(result.output.trim()).toBe(wt.path)
+    })
   })
 
   describe('ensureGitignore', () => {
