@@ -81,6 +81,20 @@ export class ElectronTmuxManager implements ITmuxManager {
   }
 
   async createSession(sessionName: string, cwd: string, env?: Record<string, string>): Promise<void> {
+    // Resolve the user's preferred shell. Electron apps launched from Finder/Dock
+    // get a minimal environment, and tmux's compiled-in default-shell is often
+    // /bin/bash rather than the user's login shell, so we must set it explicitly.
+    const userShell = process.env.SHELL || '/bin/zsh'
+
+    // Set default-shell before creating the session so that the initial window
+    // (and any future windows/panes) use the user's login shell. This is a
+    // server-global option, but setting it to the user's actual $SHELL is safe.
+    try {
+      await this._execTmux(['set-option', '-g', 'default-shell', userShell])
+    } catch {
+      // Non-fatal — tmux will use its compiled-in default
+    }
+
     // -u forces UTF-8 mode so Unicode characters render correctly even when
     // Electron is launched from Finder with a minimal locale environment.
     await this._exec(['-u', 'new-session', '-d', '-s', sessionName, '-c', cwd])
