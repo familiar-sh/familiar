@@ -225,13 +225,6 @@
   color: var(--text-primary);
   line-height: var(--line-height-tight);
   word-break: break-word;
-  border-radius: var(--radius-sm);
-  padding: 1px 2px;
-  margin: -1px -2px;
-}
-
-.title:hover {
-  background-color: var(--overlay-hover);
 }
 
 .titleInput {
