@@ -140,6 +140,12 @@ const api = {
       ipcRenderer.removeAllListeners('menu:show-workspace-picker')
     }
   },
+  onMenuAbout: (callback: () => void): (() => void) => {
+    ipcRenderer.on('menu:about', () => callback())
+    return () => {
+      ipcRenderer.removeAllListeners('menu:about')
+    }
+  },
 
   // File watching
   watchProjectDir: (callback: (projectPath?: string) => void): (() => void) => {

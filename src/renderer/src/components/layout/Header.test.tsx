@@ -11,16 +11,9 @@ vi.mock('@renderer/hooks/useProjectLabels', () => ({
   ]
 }))
 
-const mockGetVersion = vi.fn().mockResolvedValue('1.2.3')
-;(window as any).api = {
-  ...((window as any).api || {}),
-  getVersion: mockGetVersion
-}
-
 describe('Header', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    mockGetVersion.mockResolvedValue('1.2.3')
     useUIStore.setState({
       filters: {
         search: '',
@@ -359,47 +352,4 @@ describe('Header', () => {
     expect(screen.queryByTestId('label-dropdown')).toBeNull()
   })
 
-  // --- About dialog ---
-
-  it('renders about button', () => {
-    render(<Header />)
-    expect(screen.getByTestId('about-button')).toBeTruthy()
-  })
-
-  it('opens about dialog on button click', () => {
-    render(<Header />)
-    expect(screen.queryByTestId('about-dialog')).toBeNull()
-
-    fireEvent.click(screen.getByTestId('about-button'))
-    expect(screen.getByTestId('about-dialog')).toBeTruthy()
-    expect(screen.getByText('Familiar')).toBeTruthy()
-  })
-
-  it('closes about dialog on overlay click', () => {
-    render(<Header />)
-    fireEvent.click(screen.getByTestId('about-button'))
-    expect(screen.getByTestId('about-dialog')).toBeTruthy()
-
-    fireEvent.click(screen.getByTestId('about-overlay'))
-    expect(screen.queryByTestId('about-dialog')).toBeNull()
-  })
-
-  it('closes about dialog on close button click', () => {
-    render(<Header />)
-    fireEvent.click(screen.getByTestId('about-button'))
-    expect(screen.getByTestId('about-dialog')).toBeTruthy()
-
-    fireEvent.click(screen.getByLabelText('Close'))
-    expect(screen.queryByTestId('about-dialog')).toBeNull()
-  })
-
-  it('displays app version from API', async () => {
-    vi.useRealTimers()
-    render(<Header />)
-    fireEvent.click(screen.getByTestId('about-button'))
-
-    // Wait for version to load
-    const versionText = await screen.findByText('Version 1.2.3')
-    expect(versionText).toBeTruthy()
-  })
 })

@@ -8,7 +8,12 @@ export function buildAppMenu(mainWindow: BrowserWindow, updateService: UpdateSer
     {
       label: app.name,
       submenu: [
-        { role: 'about' },
+        {
+          label: 'About Familiar',
+          click: (): void => {
+            mainWindow.webContents.send('menu:about')
+          }
+        },
         {
           label: 'Check for Updates…',
           click: async (): Promise<void> => {

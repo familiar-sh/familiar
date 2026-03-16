@@ -272,10 +272,37 @@ export function Navbar(): React.JSX.Element {
                 setShowHelpMenu(false)
               }}
             >
-              <span className={styles.helpDropdownIcon}>&#128640;</span>
+              <span className={styles.helpDropdownIcon}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+                  <path d="M9 18h6" />
+                  <path d="M10 22h4" />
+                </svg>
+              </span>
               <span className={styles.helpDropdownText}>
                 <span className={styles.helpDropdownTitle}>Run Onboarding</span>
                 <span className={styles.helpDropdownDesc}>Re-run setup wizard</span>
+              </span>
+            </button>
+            <div className={styles.helpDropdownDivider} />
+            <button
+              className={styles.helpDropdownItem}
+              onClick={() => {
+                useUIStore.getState().openAboutDialog()
+                setShowHelpMenu(false)
+              }}
+              data-testid="help-about-button"
+            >
+              <span className={styles.helpDropdownIcon}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </span>
+              <span className={styles.helpDropdownText}>
+                <span className={styles.helpDropdownTitle}>About Familiar</span>
+                <span className={styles.helpDropdownDesc}>Version and info</span>
               </span>
             </button>
           </div>,

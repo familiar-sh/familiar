@@ -85,6 +85,7 @@ declare global {
       onMenuRunOnboarding(callback: () => void): () => void
       onMenuAddProject(callback: () => void): () => void
       onMenuShowWorkspacePicker(callback: () => void): () => void
+      onMenuAbout(callback: () => void): () => void
 
       // File watching
       watchProjectDir(callback: (projectPath?: string) => void): () => void
