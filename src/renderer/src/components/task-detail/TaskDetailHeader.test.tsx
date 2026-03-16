@@ -376,6 +376,31 @@ describe('TaskDetailHeader', () => {
     })
   })
 
+  it('copies document markdown to clipboard when copy document button is clicked', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+    const readTaskDocument = vi.fn().mockResolvedValue('# Hello\n\nSome **markdown** content')
+    ;(window as any).api = { ...((window as any).api ?? {}), ...mockApi, readTaskDocument }
+
+    render(<TaskDetailHeader task={makeTask()} onUpdate={onUpdate} onClose={onClose} />)
+
+    // Find the copy document button — it's right after the task ID badge
+    const buttons = screen.getAllByRole('button')
+    // The copy document button has an SVG with a rect at x=5.5, y=5.5 (copy icon)
+    const copyDocBtn = buttons.find(
+      (b) => b !== screen.getByText('tsk_test01').closest('button') &&
+        b.querySelector('svg rect[x="5.5"][y="5.5"]') !== null
+    )
+    expect(copyDocBtn).toBeTruthy()
+
+    await act(async () => {
+      fireEvent.click(copyDocBtn!)
+    })
+
+    expect(readTaskDocument).toHaveBeenCalledWith('tsk_test01')
+    expect(writeText).toHaveBeenCalledWith('# Hello\n\nSome **markdown** content')
+  })
+
   it('does not overwrite local edits when task prop changes during editing', () => {
     const task = makeTask({ title: 'Original title' })
     const { rerender } = render(

@@ -66,6 +66,82 @@ function TaskIdBadge({ id }: { id: string }): React.JSX.Element {
   )
 }
 
+function CopyDocumentButton({ taskId }: { taskId: string }): React.JSX.Element {
+  const [copied, setCopied] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleCopy = useCallback(async () => {
+    try {
+      const content = await window.api.readTaskDocument(taskId)
+      await navigator.clipboard?.writeText(content || '')
+      setCopied(true)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => setCopied(false), 1500)
+    } catch (err) {
+      console.warn('Failed to copy document:', err)
+    }
+  }, [taskId])
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
+  return (
+    <Tooltip placement="bottom" content={copied ? 'Copied!' : 'Copy document as markdown'}>
+      <button className={styles.closeButton} onClick={handleCopy}>
+        {copied ? (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M3.5 8.5L6.5 11.5L12.5 4.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <rect
+              x="5.5"
+              y="5.5"
+              width="8"
+              height="8"
+              rx="1.5"
+              stroke="currentColor"
+              strokeWidth="1.3"
+            />
+            <path
+              d="M10.5 5.5V3.5C10.5 2.67 9.83 2 9 2H3.5C2.67 2 2 2.67 2 3.5V9C2 9.83 2.67 10.5 3.5 10.5H5.5"
+              stroke="currentColor"
+              strokeWidth="1.3"
+            />
+            <path
+              d="M8 8.5V12"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+            <path
+              d="M8 8.5L10 10.5"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+            <path
+              d="M8 8.5L6 10.5"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+      </button>
+    </Tooltip>
+  )
+}
+
 interface TaskDetailHeaderProps {
   task: Task
   onUpdate: (updates: Partial<Task>) => void
@@ -215,6 +291,7 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
         </div>
         <div className={styles.topBarActions}>
           <TaskIdBadge id={task.id} />
+          <CopyDocumentButton taskId={task.id} />
           <Tooltip placement="bottom" content="Fork this task session">
             <button
               className={styles.closeButton}
