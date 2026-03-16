@@ -174,3 +174,103 @@
   color: var(--text-tertiary);
   text-align: center;
 }
+
+/* About button */
+
+.aboutButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.aboutButton:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  border-color: var(--border);
+}
+
+/* About dialog */
+
+.aboutOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  -webkit-app-region: no-drag;
+}
+
+.aboutDialog {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-5);
+  min-width: 280px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.aboutHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.aboutTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.aboutClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.aboutClose:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-elevated);
+}
+
+.aboutVersion {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-3);
+}
+
+.aboutDescription {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-3);
+  line-height: 1.5;
+}
+
+.aboutCopyright {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin: 0;
+}

@@ -27,6 +27,12 @@ export function Header(): React.JSX.Element {
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
   const [showAgentDropdown, setShowAgentDropdown] = useState(false)
   const [showLabelDropdown, setShowLabelDropdown] = useState(false)
+  const [showAboutDialog, setShowAboutDialog] = useState(false)
+  const [appVersion, setAppVersion] = useState('')
+
+  useEffect(() => {
+    window.api.getVersion().then(setAppVersion).catch(() => {})
+  }, [])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const priorityDropdownRef = useRef<HTMLDivElement>(null)
   const agentDropdownRef = useRef<HTMLDivElement>(null)
@@ -295,6 +301,72 @@ export function Header(): React.JSX.Element {
           </button>
         )}
       </div>
+
+      <button
+        className={styles.aboutButton}
+        onClick={() => setShowAboutDialog(true)}
+        title="About Familiar"
+        data-testid="about-button"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      </button>
+
+      {showAboutDialog && (
+        <div
+          className={styles.aboutOverlay}
+          onClick={() => setShowAboutDialog(false)}
+          data-testid="about-overlay"
+        >
+          <div
+            className={styles.aboutDialog}
+            onClick={(e) => e.stopPropagation()}
+            data-testid="about-dialog"
+          >
+            <div className={styles.aboutHeader}>
+              <h2 className={styles.aboutTitle}>Familiar</h2>
+              <button
+                className={styles.aboutClose}
+                onClick={() => setShowAboutDialog(false)}
+                aria-label="Close"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <p className={styles.aboutVersion}>Version {appVersion || '...'}</p>
+            <p className={styles.aboutDescription}>
+              A kanban board with embedded terminals for agentic AI coding workflows.
+            </p>
+            <p className={styles.aboutCopyright}>
+              &copy; {new Date().getFullYear()} Familiar
+            </p>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
