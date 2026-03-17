@@ -27,7 +27,7 @@ function createValidHooksSetup(root: string): void {
   mkdirSync(hooksDir, { recursive: true })
 
   writeFileSync(
-    join(claudeDir, 'settings.local.json'),
+    join(claudeDir, 'settings.json'),
     JSON.stringify({
       hooks: {
         UserPromptSubmit: [
@@ -67,7 +67,7 @@ describe('checkHooksConfigured (real filesystem)', () => {
     expect(checkHooksConfigured(testRoot)).toBe(false)
   })
 
-  it('returns false when no settings file exists', () => {
+  it('returns false when settings.json does not exist', () => {
     const hooksDir = join(testRoot, '.claude', 'hooks')
     mkdirSync(hooksDir, { recursive: true })
     writeFileSync(join(hooksDir, 'on-prompt-submit.sh'), '#!/bin/bash\n')
@@ -77,11 +77,11 @@ describe('checkHooksConfigured (real filesystem)', () => {
     expect(checkHooksConfigured(testRoot)).toBe(false)
   })
 
-  it('returns false when settings.local.json has no hooks key', () => {
+  it('returns false when settings.json has no hooks key', () => {
     const claudeDir = join(testRoot, '.claude')
     const hooksDir = join(claudeDir, 'hooks')
     mkdirSync(hooksDir, { recursive: true })
-    writeFileSync(join(claudeDir, 'settings.local.json'), JSON.stringify({ other: 'stuff' }))
+    writeFileSync(join(claudeDir, 'settings.json'), JSON.stringify({ other: 'stuff' }))
     writeFileSync(join(hooksDir, 'on-prompt-submit.sh'), '#!/bin/bash\n')
     chmodSync(join(hooksDir, 'on-prompt-submit.sh'), 0o755)
     writeFileSync(join(hooksDir, 'on-stop.sh'), '#!/bin/bash\n')
@@ -94,7 +94,7 @@ describe('checkHooksConfigured (real filesystem)', () => {
     const hooksDir = join(claudeDir, 'hooks')
     mkdirSync(hooksDir, { recursive: true })
     writeFileSync(
-      join(claudeDir, 'settings.local.json'),
+      join(claudeDir, 'settings.json'),
       JSON.stringify({ hooks: { Stop: [{ hooks: [] }] } })
     )
     writeFileSync(join(hooksDir, 'on-prompt-submit.sh'), '#!/bin/bash\n')
@@ -109,7 +109,7 @@ describe('checkHooksConfigured (real filesystem)', () => {
     const hooksDir = join(claudeDir, 'hooks')
     mkdirSync(hooksDir, { recursive: true })
     writeFileSync(
-      join(claudeDir, 'settings.local.json'),
+      join(claudeDir, 'settings.json'),
       JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [] }] } })
     )
     writeFileSync(join(hooksDir, 'on-prompt-submit.sh'), '#!/bin/bash\n')
@@ -119,10 +119,10 @@ describe('checkHooksConfigured (real filesystem)', () => {
     expect(checkHooksConfigured(testRoot)).toBe(false)
   })
 
-  it('returns false when settings.local.json is malformed JSON', () => {
+  it('returns false when settings.json is malformed JSON', () => {
     const claudeDir = join(testRoot, '.claude')
     mkdirSync(claudeDir, { recursive: true })
-    writeFileSync(join(claudeDir, 'settings.local.json'), 'not valid json{{{')
+    writeFileSync(join(claudeDir, 'settings.json'), 'not valid json{{{')
     expect(checkHooksConfigured(testRoot)).toBe(false)
   })
 
@@ -131,7 +131,7 @@ describe('checkHooksConfigured (real filesystem)', () => {
     const hooksDir = join(claudeDir, 'hooks')
     mkdirSync(hooksDir, { recursive: true })
     writeFileSync(
-      join(claudeDir, 'settings.local.json'),
+      join(claudeDir, 'settings.json'),
       JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [] }], Stop: [{ hooks: [] }] } })
     )
     writeFileSync(join(hooksDir, 'on-stop.sh'), '#!/bin/bash\n')
@@ -144,7 +144,7 @@ describe('checkHooksConfigured (real filesystem)', () => {
     const hooksDir = join(claudeDir, 'hooks')
     mkdirSync(hooksDir, { recursive: true })
     writeFileSync(
-      join(claudeDir, 'settings.local.json'),
+      join(claudeDir, 'settings.json'),
       JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [] }], Stop: [{ hooks: [] }] } })
     )
     writeFileSync(join(hooksDir, 'on-prompt-submit.sh'), '#!/bin/bash\n')
@@ -157,7 +157,7 @@ describe('checkHooksConfigured (real filesystem)', () => {
     const hooksDir = join(claudeDir, 'hooks')
     mkdirSync(hooksDir, { recursive: true })
     writeFileSync(
-      join(claudeDir, 'settings.local.json'),
+      join(claudeDir, 'settings.json'),
       JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [] }], Stop: [{ hooks: [] }] } })
     )
     writeFileSync(join(hooksDir, 'on-prompt-submit.sh'), '#!/bin/bash\n')
@@ -167,43 +167,12 @@ describe('checkHooksConfigured (real filesystem)', () => {
     expect(checkHooksConfigured(testRoot)).toBe(false)
   })
 
-  it('returns true with extra fields in settings.local.json', () => {
+  it('returns true with extra fields in settings.json', () => {
     createValidHooksSetup(testRoot)
-    const settingsPath = join(testRoot, '.claude', 'settings.local.json')
+    const settingsPath = join(testRoot, '.claude', 'settings.json')
     const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
     settings.permissions = { allow: ['Read'] }
     writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
-    expect(checkHooksConfigured(testRoot)).toBe(true)
-  })
-
-  it('returns true with legacy settings.json (backwards compatibility)', () => {
-    const claudeDir = join(testRoot, '.claude')
-    const hooksDir = join(claudeDir, 'hooks')
-    mkdirSync(hooksDir, { recursive: true })
-
-    // Create hooks config in legacy settings.json (no settings.local.json)
-    writeFileSync(
-      join(claudeDir, 'settings.json'),
-      JSON.stringify({
-        hooks: {
-          UserPromptSubmit: [
-            { hooks: [{ type: 'command', command: '"$CLAUDE_PROJECT_DIR"/.claude/hooks/on-prompt-submit.sh', timeout: 5 }] }
-          ],
-          Stop: [
-            { hooks: [{ type: 'command', command: '"$CLAUDE_PROJECT_DIR"/.claude/hooks/on-stop.sh', timeout: 5 }] }
-          ]
-        }
-      }, null, 2)
-    )
-
-    const onPromptSubmit = join(hooksDir, 'on-prompt-submit.sh')
-    writeFileSync(onPromptSubmit, '#!/bin/bash\nexit 0\n')
-    chmodSync(onPromptSubmit, 0o755)
-
-    const onStop = join(hooksDir, 'on-stop.sh')
-    writeFileSync(onStop, '#!/bin/bash\nexit 0\n')
-    chmodSync(onStop, 0o755)
-
     expect(checkHooksConfigured(testRoot)).toBe(true)
   })
 })
@@ -239,14 +208,14 @@ describe('fixHooks (real filesystem)', () => {
   it('creates all required files from scratch', () => {
     fixHooks(testRoot)
     expect(existsSync(join(testRoot, '.claude', 'hooks'))).toBe(true)
-    expect(existsSync(join(testRoot, '.claude', 'settings.local.json'))).toBe(true)
+    expect(existsSync(join(testRoot, '.claude', 'settings.json'))).toBe(true)
     expect(existsSync(join(testRoot, '.claude', 'hooks', 'on-prompt-submit.sh'))).toBe(true)
     expect(existsSync(join(testRoot, '.claude', 'hooks', 'on-stop.sh'))).toBe(true)
   })
 
-  it('creates settings.local.json with correct hooks structure', () => {
+  it('creates settings.json with correct hooks structure', () => {
     fixHooks(testRoot)
-    const settings = JSON.parse(readFileSync(join(testRoot, '.claude', 'settings.local.json'), 'utf-8'))
+    const settings = JSON.parse(readFileSync(join(testRoot, '.claude', 'settings.json'), 'utf-8'))
     expect(settings.hooks.UserPromptSubmit).toHaveLength(1)
     expect(settings.hooks.UserPromptSubmit[0].hooks[0].type).toBe('command')
     expect(settings.hooks.Stop).toHaveLength(1)
@@ -259,12 +228,12 @@ describe('fixHooks (real filesystem)', () => {
     expect(statSync(join(testRoot, '.claude', 'hooks', 'on-stop.sh')).mode & 0o100).toBeTruthy()
   })
 
-  it('preserves existing settings.local.json fields', () => {
+  it('preserves existing settings.json fields', () => {
     const claudeDir = join(testRoot, '.claude')
     mkdirSync(claudeDir, { recursive: true })
-    writeFileSync(join(claudeDir, 'settings.local.json'), JSON.stringify({ permissions: { allow: ['Read'] } }))
+    writeFileSync(join(claudeDir, 'settings.json'), JSON.stringify({ permissions: { allow: ['Read'] } }))
     fixHooks(testRoot)
-    const settings = JSON.parse(readFileSync(join(claudeDir, 'settings.local.json'), 'utf-8'))
+    const settings = JSON.parse(readFileSync(join(claudeDir, 'settings.json'), 'utf-8'))
     expect(settings.permissions).toEqual({ allow: ['Read'] })
     expect(settings.hooks).toBeDefined()
   })
@@ -279,36 +248,6 @@ describe('fixHooks (real filesystem)', () => {
     fixHooks(testRoot)
     fixHooks(testRoot)
     expect(checkHooksConfigured(testRoot)).toBe(true)
-  })
-
-  it('adds hook entries to .gitignore', () => {
-    fixHooks(testRoot)
-    const gitignore = readFileSync(join(testRoot, '.gitignore'), 'utf-8')
-    expect(gitignore).toContain('.claude/hooks/')
-    expect(gitignore).toContain('.claude/settings.local.json')
-  })
-
-  it('appends to existing .gitignore without duplicating', () => {
-    writeFileSync(join(testRoot, '.gitignore'), 'node_modules/\n')
-    fixHooks(testRoot)
-    const gitignore = readFileSync(join(testRoot, '.gitignore'), 'utf-8')
-    expect(gitignore).toContain('node_modules/')
-    expect(gitignore).toContain('.claude/hooks/')
-    expect(gitignore).toContain('.claude/settings.local.json')
-
-    // Run again — should not duplicate
-    fixHooks(testRoot)
-    const gitignore2 = readFileSync(join(testRoot, '.gitignore'), 'utf-8')
-    const hooksCount = gitignore2.split('\n').filter((l) => l.trim() === '.claude/hooks/').length
-    expect(hooksCount).toBe(1)
-  })
-
-  it('does not add entries already present in .gitignore', () => {
-    writeFileSync(join(testRoot, '.gitignore'), '.claude/hooks/\n.claude/settings.local.json\n')
-    fixHooks(testRoot)
-    const gitignore = readFileSync(join(testRoot, '.gitignore'), 'utf-8')
-    const lines = gitignore.split('\n').filter((l) => l.trim().length > 0)
-    expect(lines).toHaveLength(2)
   })
 })
 

@@ -72,14 +72,11 @@ async function checkClaudeAvailable(): Promise<boolean> {
 }
 
 export function checkHooksConfigured(projectRoot: string): boolean {
-  const settingsLocalPath = join(projectRoot, '.claude', 'settings.local.json')
-  // Also check legacy settings.json for backwards compatibility
-  const settingsLegacyPath = join(projectRoot, '.claude', 'settings.json')
+  const settingsPath = join(projectRoot, '.claude', 'settings.json')
   const onPromptSubmit = join(projectRoot, '.claude', 'hooks', 'on-prompt-submit.sh')
   const onStop = join(projectRoot, '.claude', 'hooks', 'on-stop.sh')
 
-  // Check settings.local.json (preferred) or settings.json (legacy) for hooks
-  const settingsPath = existsSync(settingsLocalPath) ? settingsLocalPath : settingsLegacyPath
+  // Check .claude/settings.json exists and has hooks
   if (!existsSync(settingsPath)) return false
   try {
     const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
@@ -111,14 +108,14 @@ export function checkSkillInstalled(projectRoot: string): boolean {
 export function fixHooks(projectRoot: string): void {
   const claudeDir = join(projectRoot, '.claude')
   const hooksDir = join(claudeDir, 'hooks')
-  const settingsPath = join(claudeDir, 'settings.local.json')
+  const settingsPath = join(claudeDir, 'settings.json')
 
   // Ensure directories exist
   if (!existsSync(hooksDir)) {
     mkdirSync(hooksDir, { recursive: true })
   }
 
-  // Create/update .claude/settings.local.json with hooks (not tracked by git)
+  // Create/update .claude/settings.json with hooks
   let settings: Record<string, unknown> = {}
   if (existsSync(settingsPath)) {
     try {
@@ -182,22 +179,6 @@ exit 0
 `
   )
   chmodSync(onStop, 0o755)
-
-  // Add hook-related entries to .gitignore so they're not committed
-  const gitignorePath = join(projectRoot, '.gitignore')
-  const entriesToAdd = ['.claude/hooks/', '.claude/settings.local.json']
-  let gitignoreContent = ''
-  if (existsSync(gitignorePath)) {
-    gitignoreContent = readFileSync(gitignorePath, 'utf-8')
-  }
-  const missingEntries = entriesToAdd.filter((entry) => {
-    // Check if entry already exists as a line in .gitignore
-    return !gitignoreContent.split('\n').some((line) => line.trim() === entry)
-  })
-  if (missingEntries.length > 0) {
-    const separator = gitignoreContent.length > 0 && !gitignoreContent.endsWith('\n') ? '\n' : ''
-    writeFileSync(gitignorePath, gitignoreContent + separator + missingEntries.join('\n') + '\n')
-  }
 }
 
 export function fixSkill(projectRoot: string): void {

@@ -230,11 +230,11 @@ Ask the user which AI agent they are using (e.g. Claude Code, Gemini CLI, Codex,
 
 #### Claude Code hooks
 
-Claude Code uses \`.claude/settings.local.json\` for hook configuration (not tracked in git). Check and set up:
+Claude Code uses \`.claude/settings.json\` for hook configuration. Check and set up:
 
 \`\`\`bash
-# Check if .claude/settings.local.json exists with hooks
-test -f .claude/settings.local.json && echo "OK: .claude/settings.local.json exists" || echo "WARN: .claude/settings.local.json not found"
+# Check if .claude/settings.json exists with hooks
+test -f .claude/settings.json && echo "OK: .claude/settings.json exists" || echo "WARN: .claude/settings.json not found"
 
 # Check if hook scripts exist
 test -x .claude/hooks/on-prompt-submit.sh && echo "OK: on-prompt-submit.sh exists and is executable" || echo "WARN: on-prompt-submit.sh missing or not executable"
@@ -243,7 +243,7 @@ test -x .claude/hooks/on-stop.sh && echo "OK: on-stop.sh exists and is executabl
 
 If hooks are missing, create them:
 
-1. Create \`.claude/settings.local.json\`:
+1. Create \`.claude/settings.json\`:
 \`\`\`json
 {
   "hooks": {

@@ -7,9 +7,6 @@ dist/
 .env.*
 !.env.example
 .familiar/
-.claude/hooks/
-.claude/settings.json
-.claude/settings.local.json
 build/*
 !build/icon.*
 !build/entitlements.*
