@@ -44,6 +44,15 @@ export function initCommand(): Command {
       const settingsPath = path.join(dataDir, SETTINGS_FILE)
       await fs.writeFile(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2) + '\n', 'utf-8')
 
+      // Create .gitignore to keep task data out of version control
+      const gitignorePath = path.join(dataDir, '.gitignore')
+      const gitignoreContent = `# Ignore everything in .familiar/ except project config
+*
+!.gitignore
+!settings.json
+`
+      await fs.writeFile(gitignorePath, gitignoreContent, 'utf-8')
+
       console.log(chalk.green('Familiar project initialized successfully!'))
       console.log(chalk.dim(`  Created ${DATA_DIR}/`))
       console.log(chalk.dim(`  Created ${DATA_DIR}/${STATE_FILE}`))

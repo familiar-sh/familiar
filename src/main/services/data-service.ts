@@ -396,6 +396,11 @@ export class DataService {
     // Write default settings
     await this.writeSettings(DEFAULT_SETTINGS)
 
+    // Create .gitignore to keep task data out of version control
+    const gitignorePath = this.getDataPath('.gitignore')
+    const gitignoreContent = `# Ignore everything in .familiar/ except project config\n*\n!.gitignore\n!settings.json\n`
+    await this.fs.writeFileAtomic(gitignorePath, gitignoreContent)
+
     return state
   }
 
