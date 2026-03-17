@@ -113,4 +113,4 @@ familiar log $FAMILIAR_TASK_ID "ERROR: <description>"
 | `familiar list [--status s] [--json]` | List tasks |
 | `familiar setup [--copy]` | Print tmux setup prompt |
 | `familiar doctor [--copy]` | Print environment diagnostic prompt |
-| `familiar agents [--copy]` | Print base AGENTS.md |
+| `familiar agents [--copy]` | Print base agent instructions |

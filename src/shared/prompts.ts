@@ -153,7 +153,7 @@ If the project is not initialized yet, run:
 familiar init
 \`\`\`
 
-This creates the \`.familiar/\` directory with default state, settings, and AGENTS.md.
+This creates the \`.familiar/\` directory with default state and settings.
 
 \`\`\`bash
 # Is .familiar/ initialized in the current project?
@@ -409,7 +409,7 @@ export const DOCTOR_AUTO_FIX_SUFFIX = `
 
 IMPORTANT: Do NOT ask the user for confirmation. Automatically fix ALL issues found without prompting. Install missing tools, create missing configs, and set up hooks — just do it. Report what you fixed when done.`
 
-export const BASE_AGENTS_MD = `# Familiar — AGENTS.md
+export const BASE_AGENTS_MD = `# Familiar — Agent Instructions
 
 This document describes how AI agents should interact with the Familiar system.
 
@@ -587,7 +587,7 @@ familiar log $FAMILIAR_TASK_ID "ERROR: description of what went wrong"
 | \`familiar list [--status s] [--json]\` | List tasks |
 | \`familiar setup [--copy]\` | Print tmux setup prompt for your AI agent |
 | \`familiar doctor [--copy]\` | Print environment diagnostic prompt |
-| \`familiar agents [--copy]\` | Print this AGENTS.md document |
+| \`familiar agents [--copy]\` | Print this agent instructions document |
 
 ## Tmux Sessions
 

@@ -34,7 +34,7 @@ export function buildSettingsSection(settings: ProjectSettings): string {
 
 export function agentsCommand(): Command {
   return new Command('agents')
-    .description('Print the base AGENTS.md for AI agent onboarding')
+    .description('Print the base agent instructions for AI agent onboarding')
     .option('--copy', 'Copy the prompt to clipboard')
     .action(async (_opts: { copy?: boolean }) => {
       const root = getProjectRoot()

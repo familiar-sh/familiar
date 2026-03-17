@@ -72,11 +72,14 @@ async function checkClaudeAvailable(): Promise<boolean> {
 }
 
 export function checkHooksConfigured(projectRoot: string): boolean {
-  const settingsPath = join(projectRoot, '.claude', 'settings.json')
+  const settingsLocalPath = join(projectRoot, '.claude', 'settings.local.json')
+  // Also check legacy settings.json for backwards compatibility
+  const settingsLegacyPath = join(projectRoot, '.claude', 'settings.json')
   const onPromptSubmit = join(projectRoot, '.claude', 'hooks', 'on-prompt-submit.sh')
   const onStop = join(projectRoot, '.claude', 'hooks', 'on-stop.sh')
 
-  // Check .claude/settings.json exists and has hooks
+  // Check settings.local.json (preferred) or settings.json (legacy) for hooks
+  const settingsPath = existsSync(settingsLocalPath) ? settingsLocalPath : settingsLegacyPath
   if (!existsSync(settingsPath)) return false
   try {
     const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
@@ -297,7 +300,7 @@ familiar log $FAMILIAR_TASK_ID "ERROR: <description>"
 | \`familiar list [--status s] [--json]\` | List tasks |
 | \`familiar setup [--copy]\` | Print tmux setup prompt |
 | \`familiar doctor [--copy]\` | Print environment diagnostic prompt |
-| \`familiar agents [--copy]\` | Print base AGENTS.md |
+| \`familiar agents [--copy]\` | Print base agent instructions |
 `
 
   writeFileSync(join(skillDir, 'SKILL.md'), skillContent)

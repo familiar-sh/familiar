@@ -17,7 +17,6 @@ import {
 } from '../../shared/constants'
 import path from 'path'
 import fs from 'fs'
-import { AGENTS_MD } from '../../shared/agent-instructions'
 
 export class DataService {
   private fs: ElectronFileSystem
@@ -393,9 +392,6 @@ export class DataService {
     }
 
     await this.writeProjectState(state)
-
-    // Write AGENTS.md for AI coding agents
-    await this.fs.writeFile(this.getDataPath('AGENTS.md'), AGENTS_MD)
 
     // Write default settings
     await this.writeSettings(DEFAULT_SETTINGS)

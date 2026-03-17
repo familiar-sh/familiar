@@ -6,7 +6,6 @@ import { DATA_DIR, STATE_FILE, TASKS_DIR, SETTINGS_FILE } from '../../shared/con
 import { DEFAULT_COLUMNS, DEFAULT_LABELS } from '../../shared/constants'
 import type { ProjectState } from '../../shared/types'
 import { DEFAULT_SETTINGS } from '../../shared/types/settings'
-import { AGENTS_MD } from '../../shared/agent-instructions'
 
 export function initCommand(): Command {
   return new Command('init')
@@ -41,9 +40,6 @@ export function initCommand(): Command {
 
       await fs.writeFile(statePath, JSON.stringify(defaultState, null, 2) + '\n', 'utf-8')
 
-      // Write AGENTS.md for AI coding agents
-      await fs.writeFile(path.join(dataDir, 'AGENTS.md'), AGENTS_MD, 'utf-8')
-
       // Write default settings (includes Start snippet)
       const settingsPath = path.join(dataDir, SETTINGS_FILE)
       await fs.writeFile(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2) + '\n', 'utf-8')
@@ -52,7 +48,6 @@ export function initCommand(): Command {
       console.log(chalk.dim(`  Created ${DATA_DIR}/`))
       console.log(chalk.dim(`  Created ${DATA_DIR}/${STATE_FILE}`))
       console.log(chalk.dim(`  Created ${DATA_DIR}/${TASKS_DIR}/`))
-      console.log(chalk.dim(`  Created ${DATA_DIR}/AGENTS.md`))
       console.log(chalk.dim(`  Created ${DATA_DIR}/${SETTINGS_FILE}`))
     })
 }
