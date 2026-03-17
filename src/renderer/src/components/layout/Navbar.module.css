@@ -79,7 +79,7 @@
   font-size: 9px;
   font-weight: var(--font-weight-bold);
   background-color: var(--priority-urgent);
-  color: var(--text-primary);
+  color: #ffffff;
   line-height: 1;
   padding: 0 3px;
   pointer-events: none;
