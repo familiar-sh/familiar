@@ -50,7 +50,7 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
         brightWhite: cssVar('--term-bright-white')
       },
       fontSize: 13,
-      fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+      fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', 'Symbols Nerd Font Mono', monospace",
       cursorBlink: true,
       cursorStyle: 'bar',
       scrollback: 0, // tmux manages scrollback, disable xterm's scrollbar

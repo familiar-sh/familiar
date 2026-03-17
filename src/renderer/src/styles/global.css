@@ -6,6 +6,15 @@
 /* Google Fonts — Inter */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* Nerd Font Symbols — fallback for terminal icon glyphs (devicons, powerline, etc.) */
+@font-face {
+  font-family: 'Symbols Nerd Font Mono';
+  src: url('../assets/fonts/SymbolsNerdFontMono-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ==========================================================================
    CSS Custom Properties (Design Tokens)
    ========================================================================== */
@@ -81,7 +90,7 @@
     Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', Menlo,
-    Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    Monaco, Consolas, 'Liberation Mono', 'Courier New', 'Symbols Nerd Font Mono', monospace;
 
   --font-size-xs: 11px;
   --font-size-sm: 12px;
