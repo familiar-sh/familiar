@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TaskCard } from './TaskCard'
 import type { Task } from '@shared/types'
 
@@ -57,7 +57,10 @@ vi.mock('@renderer/lib/file-change-hub', () => ({
   readTaskDocument: vi.fn().mockResolvedValue(''),
   readTaskActivity: vi.fn().mockResolvedValue([]),
   readProjectState: vi.fn().mockResolvedValue({ labels: [] }),
-  watchProjectDir: vi.fn().mockReturnValue(vi.fn())
+  watchProjectDir: vi.fn().mockReturnValue(vi.fn()),
+  tmuxHas: vi.fn().mockResolvedValue(false),
+  tmuxSendKeys: vi.fn().mockResolvedValue(undefined),
+  warmupTmuxSession: vi.fn().mockResolvedValue(undefined)
 }
 
 // CSS module mock returns class names matching the key
@@ -256,5 +259,75 @@ describe('TaskCard — activity preview', () => {
     await vi.waitFor(() => {
       expect(container.querySelector('.activityPreview')).toBeNull()
     })
+  })
+})
+
+describe('TaskCard — dashboard snippet warmup', () => {
+  beforeEach(() => {
+    mockNotifications.length = 0
+    mockApi.readTaskActivity.mockResolvedValue([])
+    mockApi.tmuxHas.mockReset()
+    mockApi.tmuxSendKeys.mockReset()
+    mockApi.warmupTmuxSession.mockReset()
+    mockApi.tmuxSendKeys.mockResolvedValue(undefined)
+    mockApi.warmupTmuxSession.mockResolvedValue(undefined)
+  })
+
+  it('sends snippet directly when tmux session already exists', async () => {
+    mockApi.tmuxHas.mockResolvedValue(true)
+
+    const snippet = { title: 'Start', command: '/familiar-agent', pressEnter: true, showInDashboard: true }
+    render(
+      <TaskCard
+        task={makeTask()}
+        onClick={vi.fn()}
+        dashboardSnippets={[snippet]}
+      />
+    )
+
+    const btn = screen.getByText('Start')
+    fireEvent.click(btn)
+
+    await waitFor(() => {
+      expect(mockApi.tmuxHas).toHaveBeenCalledWith('familiar-tsk_test1')
+      expect(mockApi.warmupTmuxSession).not.toHaveBeenCalled()
+      expect(mockApi.tmuxSendKeys).toHaveBeenCalledWith(
+        'familiar-tsk_test1',
+        '/familiar-agent',
+        true
+      )
+    })
+  })
+
+  it('warms up tmux session before sending snippet when session does not exist', async () => {
+    vi.useFakeTimers()
+    mockApi.tmuxHas.mockResolvedValue(false)
+
+    const snippet = { title: 'Start', command: '/familiar-agent', pressEnter: true, showInDashboard: true }
+    render(
+      <TaskCard
+        task={makeTask()}
+        onClick={vi.fn()}
+        dashboardSnippets={[snippet]}
+      />
+    )
+
+    const btn = screen.getByText('Start')
+    fireEvent.click(btn)
+
+    // Let tmuxHas and warmupTmuxSession promises resolve
+    await vi.advanceTimersByTimeAsync(100)
+    // Advance past the 3-second delay after warmup
+    await vi.advanceTimersByTimeAsync(3100)
+
+    expect(mockApi.tmuxHas).toHaveBeenCalledWith('familiar-tsk_test1')
+    expect(mockApi.warmupTmuxSession).toHaveBeenCalledWith('tsk_test1')
+    expect(mockApi.tmuxSendKeys).toHaveBeenCalledWith(
+      'familiar-tsk_test1',
+      '/familiar-agent',
+      true
+    )
+
+    vi.useRealTimers()
   })
 })

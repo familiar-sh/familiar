@@ -14,6 +14,7 @@ import { onFileChange } from '@renderer/lib/file-change-hub'
 import { formatRelativeTime, formatDuration } from '@renderer/lib/format-time'
 import { ContextMenu, PriorityIcon, MoveToWorktreeDialog } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import styles from './TaskCard.module.css'
 
@@ -63,6 +64,8 @@ export function TaskCard({
   })
 
   const { updateTask, deleteTask, deleteTasks, moveTasks, setTasksPriority } = useTaskStore()
+  const setCurrentParentId = useUIStore((s) => s.setCurrentParentId)
+  const openCreateTaskModalForSubtask = useUIStore((s) => s.openCreateTaskModalForSubtask)
   const projectLabels = useProjectLabels()
   const contextMenu = useContextMenu()
   const [priorityOpen, setPriorityOpen] = useState(false)
@@ -269,11 +272,26 @@ export function TaskCard({
     (e: React.MouseEvent, snippet: Snippet, index: number) => {
       e.stopPropagation()
       if (snippetCooldowns[index]) return
-      const sessionName = `familiar-${task.id}`
-      window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter).catch((err) => {
-        console.warn('Failed to send snippet command:', err)
-      })
       setSnippetCooldowns((prev) => ({ ...prev, [index]: true }))
+
+      const sessionName = `familiar-${task.id}`
+
+      // Ensure tmux session exists before sending snippet.
+      // Tasks created via CLI won't have a tmux session yet.
+      ;(async () => {
+        try {
+          const exists = await window.api.tmuxHas(sessionName)
+          if (!exists) {
+            await window.api.warmupTmuxSession(task.id)
+            // Wait for the default command (e.g. claude) to start up
+            await new Promise((r) => setTimeout(r, 3000))
+          }
+          await window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter)
+        } catch (err) {
+          console.warn('Failed to send snippet command:', err)
+        }
+      })()
+
       setTimeout(() => {
         setSnippetCooldowns((prev) => {
           const next = { ...prev }
@@ -377,6 +395,23 @@ export function TaskCard({
       shortcut: '4'
     },
     { label: '', onClick: () => {}, divider: true },
+    // Only show "Set as Parent" for non-subtask, non-multi-select
+    ...(!isMulti && !task.parentTaskId && !task.subtaskIds?.length ? [] : []),
+    ...(!isMulti && !task.parentTaskId ? [
+      {
+        label: 'Set as Parent Task',
+        onClick: () => setCurrentParentId(task.id),
+        shortcut: ''
+      } as ContextMenuItem
+    ] : []),
+    ...(!isMulti ? [
+      {
+        label: 'Create Subtask',
+        onClick: () => openCreateTaskModalForSubtask(task.id),
+        shortcut: ''
+      } as ContextMenuItem
+    ] : []),
+    { label: '', onClick: () => {}, divider: true },
     {
       label: 'Copy ID',
       onClick: handleCopyId,
@@ -454,17 +489,19 @@ export function TaskCard({
             style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
             aria-label={`Agent: ${task.agentStatus}`}
           />
-          {task.forkedFrom && (
-            <span className={styles.forkIcon} aria-label="Forked task" title={`Forked from ${task.forkedFrom}`}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="18" r="3" />
-                <circle cx="6" cy="6" r="3" />
-                <circle cx="18" cy="6" r="3" />
-                <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
-                <path d="M12 12v3" />
-              </svg>
-            </span>
-          )}
+          {task.parentTaskId && (() => {
+            const parentTask = useTaskStore.getState().getTaskById(task.parentTaskId!)
+            return (
+              <span className={styles.parentBadge} aria-label="Subtask" title={parentTask ? `Subtask of: ${parentTask.title}` : `Subtask of: ${task.parentTaskId}`}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="17" x2="12" y2="3" />
+                  <path d="m5 10 7-7 7 7" />
+                  <path d="M5 21h14" />
+                </svg>
+                <span className={styles.parentBadgeTitle}>{parentTask?.title ?? task.parentTaskId}</span>
+              </span>
+            )
+          })()}
           {hasUnread && <span className={styles.notificationDot} aria-label="Has notifications" />}
         </div>
 
