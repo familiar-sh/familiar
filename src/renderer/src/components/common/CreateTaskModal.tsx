@@ -1,9 +1,10 @@
-import { useCallback, useRef, useEffect } from 'react'
-import type { TaskPastedFile } from '@shared/types'
+import { useCallback, useRef, useEffect, useState } from 'react'
+import type { TaskPastedFile, Snippet } from '@shared/types'
+import { DEFAULT_SNIPPETS } from '@shared/types/settings'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { CreateTaskInput } from './CreateTaskInput'
-import type { CreateTaskInputHandle, PendingPastedFile } from './CreateTaskInput'
+import type { CreateTaskInputHandle, PendingImage, PendingPastedFile } from './CreateTaskInput'
 
 export function CreateTaskModal(): React.JSX.Element | null {
   const open = useUIStore((s) => s.createTaskModalOpen)
@@ -12,20 +13,32 @@ export function CreateTaskModal(): React.JSX.Element | null {
   const addTask = useTaskStore((s) => s.addTask)
   const createSubtask = useTaskStore((s) => s.createSubtask)
   const inputRef = useRef<CreateTaskInputHandle>(null)
+  const [snippets, setSnippets] = useState<Snippet[]>(DEFAULT_SNIPPETS)
 
+  // Load snippets when modal opens
   useEffect(() => {
-    if (open) {
-      inputRef.current?.clear()
-      setTimeout(() => inputRef.current?.focus(), 0)
-    }
+    if (!open) return
+    inputRef.current?.clear()
+    setTimeout(() => inputRef.current?.focus(), 0)
+
+    window.api.readSettings().then((settings) => {
+      if (settings.snippets && settings.snippets.length > 0) {
+        setSnippets(settings.snippets)
+      }
+    }).catch(() => {})
   }, [open])
+
+  // Resolve parent title for display
+  const parentTitle = parentId
+    ? useTaskStore.getState().getTaskById(parentId)?.title ?? null
+    : null
 
   const handleSubmit = useCallback(
     async (
       title: string,
       document?: string,
-      _enabledSnippets?: unknown,
-      _pendingImages?: unknown,
+      enabledSnippets?: Snippet[],
+      pendingImages?: PendingImage[],
       pendingPastedFiles?: PendingPastedFile[]
     ) => {
       let task: import('@shared/types').Task
@@ -37,6 +50,24 @@ export function CreateTaskModal(): React.JSX.Element | null {
           await window.api.writeTaskDocument(task.id, document)
         }
       }
+
+      // Copy pending images to task attachments
+      if (pendingImages && pendingImages.length > 0) {
+        const attachmentNames: string[] = []
+        for (const img of pendingImages) {
+          try {
+            const fileName = await window.api.copyTempToAttachment(task.id, img.tempPath, img.fileName)
+            attachmentNames.push(fileName)
+          } catch {
+            console.warn('Failed to copy image to task attachments:', img.fileName)
+          }
+        }
+        if (attachmentNames.length > 0) {
+          const { updateTask } = useTaskStore.getState()
+          await updateTask({ ...task, attachments: attachmentNames })
+        }
+      }
+
       // Save pasted files
       if (pendingPastedFiles && pendingPastedFiles.length > 0) {
         const pastedFiles: TaskPastedFile[] = []
@@ -47,6 +78,23 @@ export function CreateTaskModal(): React.JSX.Element | null {
         const { updateTask } = useTaskStore.getState()
         await updateTask({ ...task, pastedFiles })
       }
+
+      // Auto-run enabled snippets after warmup
+      if (enabledSnippets && enabledSnippets.length > 0) {
+        const taskId = task.id
+        const sessionName = `familiar-${taskId}`
+        window.api.warmupTmuxSession(taskId).then(async () => {
+          await new Promise((r) => setTimeout(r, 3000))
+          for (const snippet of enabledSnippets) {
+            try {
+              await window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter)
+            } catch {
+              // Session may not be ready
+            }
+          }
+        }).catch(() => {})
+      }
+
       closeModal()
 
       // Open the subtask in detail view
@@ -71,13 +119,17 @@ export function CreateTaskModal(): React.JSX.Element | null {
   return (
     <div style={overlayStyle} onClick={handleOverlayClick}>
       <div style={wrapperStyle}>
-        <div style={headerStyle}>{parentId ? 'Create Subtask' : 'New Task'}</div>
         <CreateTaskInput
           ref={inputRef}
           variant="rounded"
           onSubmit={handleSubmit}
           onCancel={closeModal}
+          allSnippets={snippets}
           parentId={parentId}
+          parentTitle={parentTitle}
+          onClearParent={parentId ? () => {
+            useUIStore.getState().closeCreateTaskModal()
+          } : undefined}
           placeholder="Task title... (Shift+Enter for notes, paste images)"
         />
       </div>
@@ -101,19 +153,10 @@ const overlayStyle: React.CSSProperties = {
 
 const wrapperStyle: React.CSSProperties = {
   width: '100%',
-  maxWidth: 480,
-  borderRadius: 8,
+  maxWidth: 560,
+  borderRadius: 12,
   border: '1px solid var(--border)',
   backgroundColor: 'var(--bg-surface)',
   boxShadow: 'var(--shadow-lg)',
   overflow: 'hidden'
-}
-
-const headerStyle: React.CSSProperties = {
-  padding: '12px 18px',
-  fontSize: 13,
-  fontWeight: 500,
-  color: 'var(--text-secondary)',
-  borderBottom: '1px solid var(--border)',
-  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
 }

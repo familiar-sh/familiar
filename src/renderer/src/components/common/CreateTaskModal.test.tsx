@@ -16,7 +16,12 @@ const mockApi = {
   deleteTask: vi.fn().mockResolvedValue(undefined),
   writeProjectState: vi.fn().mockResolvedValue(undefined),
   writeTaskDocument: vi.fn().mockResolvedValue(undefined),
-  warmupTmuxSession: vi.fn().mockResolvedValue(undefined)
+  warmupTmuxSession: vi.fn().mockResolvedValue(undefined),
+  readSettings: vi.fn().mockResolvedValue({ snippets: [] }),
+  tmuxHas: vi.fn().mockResolvedValue(false),
+  tmuxSendKeys: vi.fn().mockResolvedValue(undefined),
+  copyTempToAttachment: vi.fn().mockResolvedValue('file.png'),
+  savePastedFile: vi.fn().mockResolvedValue(undefined)
 }
 
 ;(window as any).api = mockApi
@@ -50,7 +55,7 @@ describe('CreateTaskModal', () => {
   it('renders when open', () => {
     useUIStore.setState({ createTaskModalOpen: true })
     render(<CreateTaskModal />)
-    expect(screen.getByText('New Task')).toBeDefined()
+    expect(screen.getByPlaceholderText('Task title... (Shift+Enter for notes, paste images)')).toBeDefined()
     expect(screen.getByPlaceholderText(/Task title/)).toBeDefined()
   })
 
@@ -79,8 +84,8 @@ describe('CreateTaskModal', () => {
     useUIStore.setState({ createTaskModalOpen: true })
     render(<CreateTaskModal />)
 
-    const header = screen.getByText('New Task')
-    fireEvent.click(header)
+    const input = screen.getByPlaceholderText('Task title... (Shift+Enter for notes, paste images)')
+    fireEvent.click(input)
 
     expect(useUIStore.getState().createTaskModalOpen).toBe(true)
   })
