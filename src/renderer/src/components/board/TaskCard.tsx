@@ -454,6 +454,19 @@ export function TaskCard({
         role="button"
         tabIndex={0}
       >
+        {task.parentTaskId && (() => {
+          const parentTask = useTaskStore.getState().getTaskById(task.parentTaskId!)
+          return (
+            <div className={styles.parentBadge} aria-label="Subtask" title={parentTask ? `Subtask of: ${parentTask.title}` : `Subtask of: ${task.parentTaskId}`}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="17" x2="12" y2="3" />
+                <path d="m5 10 7-7 7 7" />
+                <path d="M5 21h14" />
+              </svg>
+              <span className={styles.parentBadgeTitle}>{parentTask?.title ?? task.parentTaskId}</span>
+            </div>
+          )
+        })()}
         <div className={styles.topRow}>
           {task.priority !== 'none' && (
           <button
@@ -489,19 +502,6 @@ export function TaskCard({
             style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
             aria-label={`Agent: ${task.agentStatus}`}
           />
-          {task.parentTaskId && (() => {
-            const parentTask = useTaskStore.getState().getTaskById(task.parentTaskId!)
-            return (
-              <span className={styles.parentBadge} aria-label="Subtask" title={parentTask ? `Subtask of: ${parentTask.title}` : `Subtask of: ${task.parentTaskId}`}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="17" x2="12" y2="3" />
-                  <path d="m5 10 7-7 7 7" />
-                  <path d="M5 21h14" />
-                </svg>
-                <span className={styles.parentBadgeTitle}>{parentTask?.title ?? task.parentTaskId}</span>
-              </span>
-            )
-          })()}
           {hasUnread && <span className={styles.notificationDot} aria-label="Has notifications" />}
         </div>
 

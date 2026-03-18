@@ -127,13 +127,15 @@
 .parentBadge {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  padding: 3px var(--space-3);
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) var(--space-1);
+  background-color: color-mix(in srgb, var(--accent) 6%, var(--bg-elevated));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 12%, var(--border));
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   color: var(--accent);
   font-size: 10px;
-  opacity: 0.8;
   overflow: hidden;
-  flex-shrink: 1;
-  min-width: 0;
 }
 
 .parentBadgeTitle {
