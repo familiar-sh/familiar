@@ -4,11 +4,13 @@ import fs from 'fs'
 import { DataService } from './data-service'
 import { FileWatcher } from './file-watcher'
 import { generateWorkspaceId } from '../../shared/utils/id-generator'
-import type { Workspace, WorkspaceConfig } from '../../shared/types'
+import type { Workspace, WorkspaceConfig, GlobalSettings } from '../../shared/types'
+import { DEFAULT_GLOBAL_SETTINGS } from '../../shared/types'
 import type { BrowserWindow } from 'electron'
 
 const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.familiar')
 const WORKSPACES_FILE = path.join(GLOBAL_CONFIG_DIR, 'workspaces.json')
+const GLOBAL_SETTINGS_FILE = path.join(GLOBAL_CONFIG_DIR, 'settings.json')
 
 export class WorkspaceManager {
   private dataServices = new Map<string, DataService>()
@@ -42,6 +44,63 @@ export class WorkspaceManager {
     const tmpFile = WORKSPACES_FILE + `.tmp-${Date.now()}`
     fs.writeFileSync(tmpFile, JSON.stringify(config, null, 2))
     fs.renameSync(tmpFile, WORKSPACES_FILE)
+  }
+
+  // ─── Global Settings ─────────────────────────────────────────────
+
+  readGlobalSettings(): GlobalSettings {
+    try {
+      if (fs.existsSync(GLOBAL_SETTINGS_FILE)) {
+        const raw = fs.readFileSync(GLOBAL_SETTINGS_FILE, 'utf-8')
+        return { ...DEFAULT_GLOBAL_SETTINGS, ...JSON.parse(raw) }
+      }
+    } catch {
+      // Corrupt file — return defaults
+    }
+
+    // Migration: if no global settings file exists, try to seed from the
+    // active project's per-project settings (one-time migration).
+    const migrated = this.migrateThemeFromProjectSettings()
+    if (migrated) return migrated
+
+    return { ...DEFAULT_GLOBAL_SETTINGS }
+  }
+
+  /**
+   * One-time migration: reads theme settings from the active project's
+   * settings.json and writes them to the global settings file.
+   */
+  private migrateThemeFromProjectSettings(): GlobalSettings | null {
+    const activePath = this.getActiveProjectPath()
+    if (!activePath) return null
+
+    try {
+      const projectSettingsPath = path.join(activePath, '.familiar', 'settings.json')
+      if (!fs.existsSync(projectSettingsPath)) return null
+
+      const raw = fs.readFileSync(projectSettingsPath, 'utf-8')
+      const projectSettings = JSON.parse(raw)
+
+      const globalSettings: GlobalSettings = {
+        themeMode: projectSettings.themeMode ?? DEFAULT_GLOBAL_SETTINGS.themeMode,
+        darkTheme: projectSettings.darkTheme ?? DEFAULT_GLOBAL_SETTINGS.darkTheme,
+        lightTheme: projectSettings.lightTheme ?? DEFAULT_GLOBAL_SETTINGS.lightTheme
+      }
+
+      this.writeGlobalSettings(globalSettings)
+      return globalSettings
+    } catch {
+      return null
+    }
+  }
+
+  writeGlobalSettings(settings: GlobalSettings): void {
+    if (!fs.existsSync(GLOBAL_CONFIG_DIR)) {
+      fs.mkdirSync(GLOBAL_CONFIG_DIR, { recursive: true })
+    }
+    const tmpFile = GLOBAL_SETTINGS_FILE + `.tmp-${Date.now()}`
+    fs.writeFileSync(tmpFile, JSON.stringify(settings, null, 2))
+    fs.renameSync(tmpFile, GLOBAL_SETTINGS_FILE)
   }
 
   createWorkspace(name: string, projectPaths: string[]): Workspace {

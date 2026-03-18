@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification, Workspace, WorkspaceConfig } from '../shared/types'
+import type { ProjectState, Task, ActivityEntry, ProjectSettings, GlobalSettings, AppNotification, Workspace, WorkspaceConfig } from '../shared/types'
 import type { CodeEditor } from '../shared/types/settings'
 
 // Custom APIs for renderer
@@ -57,8 +57,8 @@ const api = {
     ipcRenderer.invoke('clipboard:read-native-image'),
 
   // PTY operations
-  ptyCreate: (taskId: string, paneId: string, cwd: string, forkedFrom?: string, overrideCommand?: string): Promise<string> =>
-    ipcRenderer.invoke('pty:create', taskId, paneId, cwd, forkedFrom, overrideCommand),
+  ptyCreate: (taskId: string, paneId: string, cwd: string, copySessionFrom?: string, overrideCommand?: string): Promise<string> =>
+    ipcRenderer.invoke('pty:create', taskId, paneId, cwd, copySessionFrom, overrideCommand),
   ptyCreatePlain: (taskId: string, paneId: string, cwd: string): Promise<string> =>
     ipcRenderer.invoke('pty:create-plain', taskId, paneId, cwd),
   ptyWrite: (sessionId: string, data: string): Promise<void> =>
@@ -85,8 +85,8 @@ const api = {
   tmuxHas: (name: string): Promise<boolean> => ipcRenderer.invoke('tmux:has', name),
   tmuxSendKeys: (sessionName: string, keys: string, pressEnter: boolean): Promise<void> =>
     ipcRenderer.invoke('tmux:send-keys', sessionName, keys, pressEnter),
-  warmupTmuxSession: (taskId: string, forkedFrom?: string): Promise<void> =>
-    ipcRenderer.invoke('tmux:warmup', taskId, forkedFrom),
+  warmupTmuxSession: (taskId: string, copySessionFrom?: string): Promise<void> =>
+    ipcRenderer.invoke('tmux:warmup', taskId, copySessionFrom),
 
   // Notifications
   sendNotification: (title: string, body: string): Promise<void> =>
@@ -165,6 +165,11 @@ const api = {
   readSettings: (): Promise<ProjectSettings> => ipcRenderer.invoke('settings:read'),
   writeSettings: (settings: ProjectSettings): Promise<void> =>
     ipcRenderer.invoke('settings:write', settings),
+
+  // Global settings (stored in ~/.familiar/settings.json)
+  readGlobalSettings: (): Promise<GlobalSettings> => ipcRenderer.invoke('global-settings:read'),
+  writeGlobalSettings: (settings: GlobalSettings): Promise<void> =>
+    ipcRenderer.invoke('global-settings:write', settings),
 
   // CLI
   cliCheckAvailable: (): Promise<boolean> => ipcRenderer.invoke('cli:check-available'),

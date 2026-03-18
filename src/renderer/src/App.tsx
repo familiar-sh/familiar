@@ -38,12 +38,11 @@ function App(): React.JSX.Element {
     loadOpenProjects()
   }, [loadProjectState, loadNotifications, loadWorkspaceNotifications, loadOpenProjects])
 
-  // Load theme preferences from settings whenever the active project changes.
-  // This ensures themes are loaded on initial mount AND on workspace/project switch.
-  const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
+  // Load theme preferences from global settings (~/.familiar/settings.json) once on mount.
+  // Theme is global, not per-project, so no need to reload on project switch.
   useEffect(() => {
     window.api
-      .readSettings()
+      .readGlobalSettings()
       .then((settings) => {
         const store = useUIStore.getState()
         if (settings.themeMode) store.setThemeMode(settings.themeMode)
@@ -53,11 +52,12 @@ function App(): React.JSX.Element {
       .catch(() => {
         /* use defaults */
       })
-  }, [activeProjectPath])
+  }, [])
 
   // When switching to an uninitialized project, open onboarding.
   // When switching to an initialized project, close onboarding.
   // On first app launch with no project at all, show workspace picker.
+  const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
   const openOnboarding = useUIStore((s) => s.openOnboarding)
   const onboardingOpen = useUIStore((s) => s.onboardingOpen)
   const closeOnboarding = useUIStore((s) => s.closeOnboarding)

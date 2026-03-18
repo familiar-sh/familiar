@@ -36,7 +36,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Persist theme preferences to settings.json when they change
+  // Persist theme preferences to global settings (~/.familiar/settings.json)
   // Guard: skip the initial render to avoid writing defaults before settings load
   const hasLoadedRef = useRef(false)
   useEffect(() => {
@@ -46,9 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
     }
     const save = async (): Promise<void> => {
       try {
-        const current = await window.api.readSettings()
-        await window.api.writeSettings({
-          ...current,
+        await window.api.writeGlobalSettings({
           themeMode,
           darkTheme,
           lightTheme

@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification, Workspace, WorkspaceConfig } from '../../shared/types'
+import type { ProjectState, Task, ActivityEntry, ProjectSettings, GlobalSettings, AppNotification, Workspace, WorkspaceConfig } from '../../shared/types'
 import type { CodeEditor } from '../../shared/types/settings'
 
 declare global {
@@ -51,7 +51,7 @@ declare global {
       clipboardReadNativeImage(): Promise<string | null>
 
       // PTY operations
-      ptyCreate(taskId: string, paneId: string, cwd: string, forkedFrom?: string, overrideCommand?: string): Promise<string>
+      ptyCreate(taskId: string, paneId: string, cwd: string, copySessionFrom?: string, overrideCommand?: string): Promise<string>
       ptyCreatePlain(taskId: string, paneId: string, cwd: string): Promise<string>
       ptyWrite(sessionId: string, data: string): Promise<void>
       ptyResize(sessionId: string, cols: number, rows: number): Promise<void>
@@ -65,7 +65,7 @@ declare global {
       tmuxKill(name: string): Promise<void>
       tmuxHas(name: string): Promise<boolean>
       tmuxSendKeys(sessionName: string, keys: string, pressEnter: boolean): Promise<void>
-      warmupTmuxSession(taskId: string, forkedFrom?: string): Promise<void>
+      warmupTmuxSession(taskId: string, copySessionFrom?: string): Promise<void>
 
       // Notifications
       sendNotification(title: string, body: string): Promise<void>
@@ -95,6 +95,10 @@ declare global {
       // Settings
       readSettings(): Promise<ProjectSettings>
       writeSettings(settings: ProjectSettings): Promise<void>
+
+      // Global settings (stored in ~/.familiar/settings.json)
+      readGlobalSettings(): Promise<GlobalSettings>
+      writeGlobalSettings(settings: GlobalSettings): Promise<void>
 
       // CLI
       cliCheckAvailable(): Promise<boolean>

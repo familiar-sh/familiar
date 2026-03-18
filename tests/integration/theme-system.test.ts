@@ -62,15 +62,15 @@ describe('Theme system integration', () => {
     expect(useUIStore.getState().themeMode).toBe('system')
   })
 
-  it('settings fields have defaults', async () => {
-    const { DEFAULT_SETTINGS } = await import('../../src/shared/types/settings')
-    expect(DEFAULT_SETTINGS.themeMode).toBe('system')
-    expect(DEFAULT_SETTINGS.darkTheme).toBe('familiar-dark')
-    expect(DEFAULT_SETTINGS.lightTheme).toBe('familiar-light')
+  it('global settings fields have defaults', async () => {
+    const { DEFAULT_GLOBAL_SETTINGS } = await import('../../src/shared/types/settings')
+    expect(DEFAULT_GLOBAL_SETTINGS.themeMode).toBe('system')
+    expect(DEFAULT_GLOBAL_SETTINGS.darkTheme).toBe('familiar-dark')
+    expect(DEFAULT_GLOBAL_SETTINGS.lightTheme).toBe('familiar-light')
   })
 
-  it('store updates atomically when loading settings from a new project', () => {
-    // Simulate the settings loading flow that happens on project switch
+  it('store updates atomically when loading global settings', () => {
+    // Simulate the settings loading flow that happens on mount
     const store = useUIStore.getState()
 
     // Start with defaults (as the store would on mount)
@@ -78,7 +78,7 @@ describe('Theme system integration', () => {
     expect(store.darkTheme).toBe('familiar-dark')
     expect(store.lightTheme).toBe('familiar-light')
 
-    // Simulate loading settings from a project with custom theme
+    // Simulate loading global settings with custom theme
     const settings = {
       themeMode: 'dark' as const,
       darkTheme: 'dracula',
@@ -103,7 +103,7 @@ describe('Theme system integration', () => {
     store.setDarkTheme('dracula')
     store.setLightTheme('solarized-light')
 
-    // Then "switch project" with default settings
+    // Then load default global settings
     const defaults = {
       themeMode: 'system' as const,
       darkTheme: 'familiar-dark',

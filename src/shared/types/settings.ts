@@ -42,11 +42,11 @@ export interface ProjectSettings {
   codingAgent?: CodingAgent
   /** Whether to skip the doctor check during onboarding */
   skipDoctor?: boolean
-  /** Theme mode: system follows OS, or force light/dark */
+  /** @deprecated Theme settings moved to GlobalSettings in ~/.familiar/settings.json */
   themeMode?: 'system' | 'light' | 'dark'
-  /** Selected dark theme preset ID */
+  /** @deprecated Theme settings moved to GlobalSettings in ~/.familiar/settings.json */
   darkTheme?: string
-  /** Selected light theme preset ID */
+  /** @deprecated Theme settings moved to GlobalSettings in ~/.familiar/settings.json */
   lightTheme?: string
   /** Last-used environment variables for the worktree post-create hook */
   worktreeEnvVariables?: WorktreeEnvVariable[]
@@ -83,7 +83,20 @@ export const DEFAULT_SETTINGS: ProjectSettings = {
     'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID',
   snippets: DEFAULT_SNIPPETS,
   simplifyTaskTitles: true,
-  labels: undefined, // Populated from DEFAULT_LABELS on first load
+  labels: undefined // Populated from DEFAULT_LABELS on first load
+}
+
+/** Global settings stored in ~/.familiar/settings.json (shared across all projects) */
+export interface GlobalSettings {
+  /** Theme mode: system follows OS, or force light/dark */
+  themeMode?: 'system' | 'light' | 'dark'
+  /** Selected dark theme preset ID */
+  darkTheme?: string
+  /** Selected light theme preset ID */
+  lightTheme?: string
+}
+
+export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   themeMode: 'system',
   darkTheme: 'familiar-dark',
   lightTheme: 'familiar-light'
