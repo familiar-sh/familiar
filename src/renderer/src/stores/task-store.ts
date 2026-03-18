@@ -19,7 +19,7 @@ interface TaskStore {
   openWorkspace: () => Promise<boolean>
 
   // Task CRUD
-  addTask: (title: string, options?: Partial<Task>) => Promise<Task>
+  addTask: (title: string, options?: Partial<Task>, skipWarmup?: boolean) => Promise<Task>
   createSubtask: (parentId: string, title: string, options?: { copySession?: boolean; documentContent?: string }) => Promise<Task>
   updateTask: (task: Task) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
@@ -135,7 +135,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   },
 
   // Task CRUD
-  addTask: async (title: string, options?: Partial<Task>): Promise<Task> => {
+  addTask: async (title: string, options?: Partial<Task>, skipWarmup?: boolean): Promise<Task> => {
     const { projectState } = get()
     if (!projectState) throw new Error('Project not initialized')
 
@@ -173,8 +173,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set({ projectState: newState })
 
     // Warm up tmux session for non-archived tasks (fire-and-forget).
-    // Note: session copying is only done explicitly via createSubtask with copySession=true
-    if (task.status !== 'archived') {
+    // skipWarmup is used by createSubtask when copySession=true — it needs to
+    // copy the Claude session file before the tmux session is created.
+    if (task.status !== 'archived' && !skipWarmup) {
       window.api.warmupTmuxSession(task.id).catch(() => {
         // Warmup failure is non-critical — terminal will create session on open
       })
@@ -190,17 +191,20 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const parent = projectState.tasks.find((t: Task) => t.id === parentId)
     if (!parent) throw new Error(`Parent task not found: ${parentId}`)
 
-    // Create the child task with parentTaskId set
-    const child = await addTask(title, { parentTaskId: parentId })
+    // Create the child task with parentTaskId set.
+    // Skip warmup if we need to copy the session first (session file must exist before tmux starts).
+    const child = await addTask(title, { parentTaskId: parentId }, !!options?.copySession)
 
     // Write document content if provided
     if (options?.documentContent) {
       await window.api.writeTaskDocument(child.id, options.documentContent)
     }
 
-    // Copy session if requested (opt-in, off by default)
-    if (options?.copySession) {
-      window.api.warmupTmuxSession(child.id, parentId).catch(() => {})
+    // Warm up tmux — with session copy if requested.
+    // This must happen after addTask (so we know the child ID) but the warmup
+    // handler copies the session file before creating the tmux session.
+    if (child.status !== 'archived') {
+      window.api.warmupTmuxSession(child.id, options?.copySession ? parentId : undefined).catch(() => {})
     }
 
     // Update parent's subtaskIds array
