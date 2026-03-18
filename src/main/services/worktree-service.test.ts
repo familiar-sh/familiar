@@ -191,6 +191,36 @@ describe('WorktreeService', () => {
       const branches = execSync('git branch', { cwd: gitRoot, encoding: 'utf-8' })
       expect(branches).not.toContain('familiar-worktree/branch-cleanup')
     })
+
+    it('works when projectPath points to a different git repo', () => {
+      // Simulate the bug: user is on a different project when removing a worktree
+      const otherRepo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'other-repo-')))
+      execSync('git init', { cwd: otherRepo, stdio: 'pipe' })
+      execSync('git config user.email "test@test.com"', { cwd: otherRepo, stdio: 'pipe' })
+      execSync('git config user.name "Test"', { cwd: otherRepo, stdio: 'pipe' })
+      fs.writeFileSync(path.join(otherRepo, 'README.md'), '# Other')
+      execSync('git add .', { cwd: otherRepo, stdio: 'pipe' })
+      execSync('git commit -m "init"', { cwd: otherRepo, stdio: 'pipe' })
+
+      try {
+        const wt = WorktreeService.createWorktree(gitRoot, 'cross-project')
+        // Remove using the OTHER repo as projectPath (simulating active project switch)
+        WorktreeService.removeWorktree(otherRepo, wt.path)
+        const worktrees = WorktreeService.listWorktrees(gitRoot)
+        expect(worktrees.length).toBe(1) // only main
+        expect(fs.existsSync(wt.path)).toBe(false)
+      } finally {
+        fs.rmSync(otherRepo, { recursive: true, force: true })
+      }
+    })
+
+    it('handles already-removed worktree directory gracefully', () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'already-gone')
+      // Manually delete the worktree directory (simulating external deletion)
+      fs.rmSync(wt.path, { recursive: true, force: true })
+      // Should not throw — should prune stale entries instead
+      expect(() => WorktreeService.removeWorktree(gitRoot, wt.path)).not.toThrow()
+    })
   })
 
   describe('renameWorktree', () => {
@@ -221,6 +251,25 @@ describe('WorktreeService', () => {
       expect(() => WorktreeService.renameWorktree(gitRoot, wt.path, 'existing')).toThrow(
         'already exists'
       )
+    })
+
+    it('works when projectPath points to a different git repo', () => {
+      const otherRepo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'other-repo-')))
+      execSync('git init', { cwd: otherRepo, stdio: 'pipe' })
+      execSync('git config user.email "test@test.com"', { cwd: otherRepo, stdio: 'pipe' })
+      execSync('git config user.name "Test"', { cwd: otherRepo, stdio: 'pipe' })
+      fs.writeFileSync(path.join(otherRepo, 'README.md'), '# Other')
+      execSync('git add .', { cwd: otherRepo, stdio: 'pipe' })
+      execSync('git commit -m "init"', { cwd: otherRepo, stdio: 'pipe' })
+
+      try {
+        const wt = WorktreeService.createWorktree(gitRoot, 'cross-rename')
+        const result = WorktreeService.renameWorktree(otherRepo, wt.path, 'renamed-cross')
+        expect(result.slug).toBe('renamed-cross')
+        expect(fs.existsSync(result.path)).toBe(true)
+      } finally {
+        fs.rmSync(otherRepo, { recursive: true, force: true })
+      }
     })
 
     it('appears in worktree list with new name after rename', () => {

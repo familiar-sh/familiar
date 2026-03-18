@@ -183,10 +183,12 @@ export class WorktreeService {
    * Returns the updated worktree info.
    */
   static renameWorktree(projectPath: string, worktreePath: string, newSlug: string): WorktreeInfo {
-    const gitRoot = this.getGitRoot(projectPath)
+    const gitRoot =
+      this.getGitRootFromWorktreePath(worktreePath) ||
+      this.getGitRoot(projectPath)
     if (!gitRoot) throw new Error('Not a git repository')
 
-    const worktrees = this.listWorktrees(projectPath)
+    const worktrees = this.listWorktrees(gitRoot)
     const wt = worktrees.find((w) => w.path === worktreePath)
     if (!wt) throw new Error('Worktree not found')
 
@@ -239,22 +241,53 @@ export class WorktreeService {
   }
 
   /**
+   * Derive the git root from a worktree path.
+   * Worktree paths are always <gitRoot>/.familiar/worktrees/<slug>.
+   */
+  private static getGitRootFromWorktreePath(worktreePath: string): string | null {
+    const marker = `${path.sep}.familiar${path.sep}worktrees${path.sep}`
+    const idx = worktreePath.indexOf(marker)
+    if (idx !== -1) {
+      return worktreePath.substring(0, idx)
+    }
+    return null
+  }
+
+  /**
    * Remove a worktree.
    */
   static removeWorktree(projectPath: string, worktreePath: string): void {
-    const gitRoot = this.getGitRoot(projectPath)
+    // Derive git root from the worktree path itself (reliable even when
+    // the active project has changed), falling back to projectPath.
+    const gitRoot =
+      this.getGitRootFromWorktreePath(worktreePath) ||
+      this.getGitRoot(projectPath)
     if (!gitRoot) throw new Error('Not a git repository')
 
     // Get the branch name before removing so we can clean it up
-    const worktrees = this.listWorktrees(projectPath)
+    const worktrees = this.listWorktrees(gitRoot)
     const wt = worktrees.find((w) => w.path === worktreePath)
     const branchToDelete = wt?.branch
 
-    execSync(`git worktree remove "${worktreePath}" --force`, {
-      cwd: gitRoot,
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe']
-    })
+    try {
+      execSync(`git worktree remove "${worktreePath}" --force`, {
+        cwd: gitRoot,
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      // If the worktree directory is already gone, prune stale entries instead
+      if (msg.includes('is not a working tree') || msg.includes('does not exist')) {
+        execSync('git worktree prune', {
+          cwd: gitRoot,
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        })
+      } else {
+        throw new Error(`Failed to remove worktree: ${msg}`)
+      }
+    }
 
     // Delete the branch if it was a familiar-worktree branch
     if (branchToDelete && branchToDelete.startsWith('familiar-worktree/')) {
@@ -377,7 +410,9 @@ export class WorktreeService {
     worktreePath: string,
     envVars: Record<string, string> = {}
   ): Promise<{ ran: boolean; exitCode: number | null; output: string }> {
-    const gitRoot = this.getGitRoot(projectPath)
+    const gitRoot =
+      this.getGitRootFromWorktreePath(worktreePath) ||
+      this.getGitRoot(projectPath)
     if (!gitRoot) return { ran: false, exitCode: null, output: '' }
 
     const hookPath = path.join(gitRoot, '.familiar', 'hooks', 'pre-worktree-delete.sh')
