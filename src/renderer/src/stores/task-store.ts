@@ -201,10 +201,16 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }
 
     // Warm up tmux — with session copy if requested.
-    // This must happen after addTask (so we know the child ID) but the warmup
-    // handler copies the session file before creating the tmux session.
+    // When copying a session, we MUST await the warmup so the session file is
+    // copied and the tmux session is created before the UI opens the terminal
+    // (which would otherwise create a fresh session without the copy).
     if (child.status !== 'archived') {
-      window.api.warmupTmuxSession(child.id, options?.copySession ? parentId : undefined).catch(() => {})
+      const warmup = window.api.warmupTmuxSession(child.id, options?.copySession ? parentId : undefined)
+      if (options?.copySession) {
+        await warmup.catch(() => {})
+      } else {
+        warmup.catch(() => {})
+      }
     }
 
     // Update parent's subtaskIds array
