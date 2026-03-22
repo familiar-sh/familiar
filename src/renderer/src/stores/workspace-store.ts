@@ -207,13 +207,25 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const gitRootMap = new Map<string, WorktreeInfo[]>()
       const allWorktreePaths = new Set<string>()
 
+      // Track all git roots we've seen (including worktree --show-toplevel
+      // values) to avoid redundant worktreeList calls.
+      const seenGitRoots = new Set<string>()
+
       for (const project of openProjects) {
         const gitRoot = await window.api.worktreeGetGitRoot(project.path)
-        if (!gitRoot || gitRootMap.has(gitRoot)) continue
+        if (!gitRoot || seenGitRoots.has(gitRoot)) continue
+        seenGitRoots.add(gitRoot)
 
         const worktrees = await window.api.worktreeList(project.path)
+        // Use the main worktree's path as the canonical key, since
+        // gitRoot may differ per project (worktrees return their own
+        // --show-toplevel, not the main repo root).
+        const mainWt = worktrees.find((w) => w.isMain)
+        const canonicalRoot = mainWt?.path ?? gitRoot
+        if (gitRootMap.has(canonicalRoot)) continue
+
         const nonMain = worktrees.filter((w) => !w.isMain)
-        gitRootMap.set(gitRoot, nonMain)
+        gitRootMap.set(canonicalRoot, nonMain)
         for (const w of nonMain) {
           allWorktreePaths.add(w.path)
         }
@@ -232,15 +244,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
       set((s) => ({
         openProjects: s.openProjects.map((p) => {
+          // Check if this project IS a worktree first — takes priority over
+          // it also having nested worktrees (which would incorrectly make it
+          // appear as a parent project in the sidebar)
+          if (allWorktreePaths.has(p.path)) {
+            return { ...p, worktrees: undefined, isWorktree: true }
+          }
           // Check if this project is a git root with worktrees
           const nonMainWorktrees = gitRootMap.get(p.path)
           if (nonMainWorktrees && nonMainWorktrees.length > 0) {
             hasAnyWorktrees = true
             return { ...p, worktrees: nonMainWorktrees, isWorktree: false }
-          }
-          if (allWorktreePaths.has(p.path)) {
-            // This project IS a worktree — mark it so the UI can hide it
-            return { ...p, worktrees: undefined, isWorktree: true }
           }
           return { ...p, worktrees: undefined, isWorktree: false }
         }),

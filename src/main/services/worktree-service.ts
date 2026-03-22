@@ -62,7 +62,8 @@ export class WorktreeService {
         stdio: ['pipe', 'pipe', 'pipe']
       })
 
-      const worktrees: WorktreeInfo[] = []
+      // Parse all worktree entries
+      const rawEntries: { path: string; branch: string }[] = []
       const blocks = output.split('\n\n').filter(Boolean)
 
       for (const block of blocks) {
@@ -84,17 +85,25 @@ export class WorktreeService {
         }
 
         if (!wtPath || isBare) continue
+        rawEntries.push({ path: wtPath, branch })
+      }
 
-        const isMain = wtPath === gitRoot
+      if (rawEntries.length === 0) return []
 
-        // Only include main worktree and worktrees inside .familiar/worktrees/
-        const familiarWorktreesDir = path.join(gitRoot, '.familiar', 'worktrees')
-        const isInFamiliarDir = wtPath.startsWith(familiarWorktreesDir + path.sep) || wtPath === familiarWorktreesDir
+      // The first entry in `git worktree list` is always the main worktree.
+      // We use its path (not gitRoot, which may be a worktree's --show-toplevel)
+      // to correctly determine the .familiar/worktrees/ directory.
+      const mainWorktreePath = rawEntries[0].path
+      const familiarWorktreesDir = path.join(mainWorktreePath, '.familiar', 'worktrees')
+
+      const worktrees: WorktreeInfo[] = []
+      for (const entry of rawEntries) {
+        const isMain = entry.path === mainWorktreePath
+        const isInFamiliarDir = entry.path.startsWith(familiarWorktreesDir + path.sep) || entry.path === familiarWorktreesDir
         if (!isMain && !isInFamiliarDir) continue
 
-        const slug = path.basename(wtPath)
-
-        worktrees.push({ path: wtPath, branch, slug, isMain })
+        const slug = path.basename(entry.path)
+        worktrees.push({ path: entry.path, branch: entry.branch, slug, isMain })
       }
 
       return worktrees
@@ -113,9 +122,14 @@ export class WorktreeService {
       throw new Error('Not a git repository')
     }
 
+    // Resolve the main worktree root — if projectPath is inside a worktree,
+    // gitRoot will be the worktree's own --show-toplevel, not the main repo.
+    // We need the main repo root to create worktrees in the correct location.
+    const mainRoot = this.getMainWorktreeRoot(gitRoot)
+
     const slug = customSlug || generateWorktreeSlug()
     const branchName = `familiar-worktree/${slug}`
-    const worktreesDir = path.join(gitRoot, '.familiar', 'worktrees')
+    const worktreesDir = path.join(mainRoot, '.familiar', 'worktrees')
     const worktreePath = path.join(worktreesDir, slug)
 
     // Ensure the worktrees directory exists
@@ -124,12 +138,12 @@ export class WorktreeService {
     }
 
     // Ensure .familiar/.gitignore exists and ignores worktrees/
-    this.ensureGitignore(gitRoot)
+    this.ensureGitignore(mainRoot)
 
     // Create the worktree with a new branch
     try {
       execSync(`git worktree add -b "${branchName}" "${worktreePath}"`, {
-        cwd: gitRoot,
+        cwd: mainRoot,
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe']
       })
@@ -238,6 +252,30 @@ export class WorktreeService {
       slug: newSlug,
       isMain: false
     }
+  }
+
+  /**
+   * Get the main worktree root for a git repo.
+   * `git rev-parse --show-toplevel` returns the worktree's own directory
+   * when called from inside a worktree, so we use `git worktree list` to
+   * find the actual main worktree path (always the first entry).
+   */
+  static getMainWorktreeRoot(gitRoot: string): string {
+    try {
+      const output = execSync('git worktree list --porcelain', {
+        cwd: gitRoot,
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+      // The first entry is always the main worktree
+      const firstLine = output.split('\n').find((l) => l.startsWith('worktree '))
+      if (firstLine) {
+        return firstLine.slice('worktree '.length)
+      }
+    } catch {
+      // Fall through to return gitRoot
+    }
+    return gitRoot
   }
 
   /**

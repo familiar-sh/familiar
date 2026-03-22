@@ -66,6 +66,19 @@ describe('WorktreeService', () => {
     })
   })
 
+  describe('getMainWorktreeRoot', () => {
+    it('returns the same path for a main worktree', () => {
+      const result = WorktreeService.getMainWorktreeRoot(gitRoot)
+      expect(result).toBe(gitRoot)
+    })
+
+    it('returns the main repo root when called from a worktree', () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'test-main-root')
+      const result = WorktreeService.getMainWorktreeRoot(wt.path)
+      expect(result).toBe(gitRoot)
+    })
+  })
+
   describe('listWorktrees', () => {
     it('lists main worktree', () => {
       const worktrees = WorktreeService.listWorktrees(gitRoot)
@@ -82,6 +95,22 @@ describe('WorktreeService', () => {
       } finally {
         fs.rmSync(nonGitDir, { recursive: true, force: true })
       }
+    })
+
+    it('correctly identifies main worktree when called from a worktree path', () => {
+      // Create a worktree, then list from inside it
+      const wt = WorktreeService.createWorktree(gitRoot, 'from-wt')
+      const worktrees = WorktreeService.listWorktrees(wt.path)
+
+      // Should still correctly identify the main worktree
+      const main = worktrees.find((w) => w.isMain)
+      expect(main).toBeDefined()
+      expect(main!.path).toBe(gitRoot)
+
+      // The created worktree should NOT be marked as main
+      const child = worktrees.find((w) => w.path === wt.path)
+      expect(child).toBeDefined()
+      expect(child!.isMain).toBe(false)
     })
 
     it('excludes worktrees outside .familiar/worktrees/', () => {
@@ -147,6 +176,18 @@ describe('WorktreeService', () => {
       expect(fs.existsSync(gitignorePath)).toBe(true)
       const content = fs.readFileSync(gitignorePath, 'utf-8')
       expect(content).toContain('worktrees/')
+    })
+
+    it('creates worktree under main repo when called from a worktree path', () => {
+      // Create first worktree
+      const wt1 = WorktreeService.createWorktree(gitRoot, 'first-wt')
+      // Create second worktree FROM the first worktree's path
+      const wt2 = WorktreeService.createWorktree(wt1.path, 'second-wt')
+
+      // The second worktree should be under the MAIN repo's .familiar/worktrees/,
+      // NOT nested inside the first worktree
+      expect(wt2.path).toBe(path.join(gitRoot, '.familiar', 'worktrees', 'second-wt'))
+      expect(fs.existsSync(wt2.path)).toBe(true)
     })
 
     it('generates a slug when none is provided', () => {

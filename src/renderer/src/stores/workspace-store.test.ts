@@ -432,6 +432,85 @@ describe('workspace-store', () => {
       expect(useWorkspaceStore.getState().sidebarVisible).toBe(true)
     })
 
+    it('marks worktree as isWorktree even when it has nested worktrees', async () => {
+      // Bug: when a worktree has its own nested worktrees (e.g. created while
+      // the worktree was active), the worktree would appear as a parent project
+      // instead of being hidden as a child worktree.
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/project', name: 'project' },
+          { path: '/tmp/project/.familiar/worktrees/feat-x', name: 'feat-x' },
+          { path: '/tmp/project/.familiar/worktrees/feat-y', name: 'feat-y' }
+        ]
+      })
+
+      mockApi.worktreeGetGitRoot.mockImplementation((projectPath?: string) => {
+        // Worktrees return their own --show-toplevel
+        if (projectPath === '/tmp/project') return Promise.resolve('/tmp/project')
+        if (projectPath === '/tmp/project/.familiar/worktrees/feat-x') return Promise.resolve('/tmp/project/.familiar/worktrees/feat-x')
+        if (projectPath === '/tmp/project/.familiar/worktrees/feat-y') return Promise.resolve('/tmp/project/.familiar/worktrees/feat-y')
+        return Promise.resolve(null)
+      })
+
+      mockApi.worktreeList.mockImplementation((projectPath?: string) => {
+        // Main project lists all worktrees correctly
+        if (projectPath === '/tmp/project') {
+          return Promise.resolve([
+            { path: '/tmp/project', branch: 'main', slug: 'project', isMain: true },
+            { path: '/tmp/project/.familiar/worktrees/feat-x', branch: 'familiar-worktree/feat-x', slug: 'feat-x', isMain: false },
+            { path: '/tmp/project/.familiar/worktrees/feat-y', branch: 'familiar-worktree/feat-y', slug: 'feat-y', isMain: false }
+          ])
+        }
+        // Worktree returns itself as main (git bug when --show-toplevel differs)
+        return Promise.resolve([
+          { path: projectPath, branch: 'some-branch', slug: 'self', isMain: true }
+        ])
+      })
+
+      await useWorkspaceStore.getState().loadWorktrees()
+
+      const state = useWorkspaceStore.getState()
+      // Main project should be parent with worktrees
+      expect(state.openProjects[0].isWorktree).toBe(false)
+      expect(state.openProjects[0].worktrees).toHaveLength(2)
+      // Both worktrees should be marked as worktrees (hidden from main list)
+      expect(state.openProjects[1].isWorktree).toBe(true)
+      expect(state.openProjects[1].worktrees).toBeUndefined()
+      expect(state.openProjects[2].isWorktree).toBe(true)
+      expect(state.openProjects[2].worktrees).toBeUndefined()
+    })
+
+    it('deduplicates by canonical root when worktrees return different git roots', async () => {
+      // When worktreeGetGitRoot returns different values for worktrees vs main,
+      // but worktreeList correctly identifies the main worktree, we should
+      // still deduplicate and only call worktreeList once per canonical root.
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/project', name: 'project' },
+          { path: '/tmp/project/.familiar/worktrees/feat-x', name: 'feat-x' }
+        ]
+      })
+
+      mockApi.worktreeGetGitRoot.mockImplementation((projectPath?: string) => {
+        // Each returns its own --show-toplevel
+        return Promise.resolve(projectPath)
+      })
+
+      mockApi.worktreeList.mockImplementation(() => {
+        return Promise.resolve([
+          { path: '/tmp/project', branch: 'main', slug: 'project', isMain: true },
+          { path: '/tmp/project/.familiar/worktrees/feat-x', branch: 'familiar-worktree/feat-x', slug: 'feat-x', isMain: false }
+        ])
+      })
+
+      await useWorkspaceStore.getState().loadWorktrees()
+
+      const state = useWorkspaceStore.getState()
+      expect(state.openProjects[0].isWorktree).toBe(false)
+      expect(state.openProjects[0].worktrees).toHaveLength(1)
+      expect(state.openProjects[1].isWorktree).toBe(true)
+    })
+
     it('does not query same git root twice', async () => {
       useWorkspaceStore.setState({
         openProjects: [
