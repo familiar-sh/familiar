@@ -1,4 +1,4 @@
-import { execSync, spawn } from 'child_process'
+import { execSync, spawn, type ChildProcess } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import { generateWorktreeSlug } from '../../shared/utils/name-generator'
@@ -14,6 +14,8 @@ export interface WorktreeInfo {
  * Service for managing git worktrees inside .familiar/worktrees/.
  */
 export class WorktreeService {
+  /** Track running pre-delete hook processes by worktree path for abort support */
+  private static runningPreDeleteHooks = new Map<string, ChildProcess>()
   /**
    * Get the git root directory for a project path.
    * Returns null if the path is not inside a git repo.
@@ -465,9 +467,58 @@ export class WorktreeService {
     if (!gitRoot) return { ran: false, exitCode: null, output: '' }
 
     const hookPath = path.join(gitRoot, '.familiar', 'hooks', 'pre-worktree-delete.sh')
-    const builtinEnv = this.getHookBuiltinEnv(gitRoot, worktreePath, 'DELETE')
+    if (!fs.existsSync(hookPath)) {
+      return { ran: false, exitCode: null, output: '' }
+    }
 
-    return this.runHook(hookPath, worktreePath, { ...builtinEnv, ...envVars })
+    try {
+      fs.chmodSync(hookPath, 0o755)
+    } catch {
+      // Non-critical
+    }
+
+    const builtinEnv = this.getHookBuiltinEnv(gitRoot, worktreePath, 'DELETE')
+    const env = { ...process.env, ...builtinEnv, ...envVars }
+
+    return new Promise((resolve) => {
+      let output = ''
+      const child = spawn('/bin/bash', [hookPath], {
+        cwd: worktreePath,
+        env,
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+
+      this.runningPreDeleteHooks.set(worktreePath, child)
+
+      child.stdout?.on('data', (data) => {
+        output += data.toString()
+      })
+      child.stderr?.on('data', (data) => {
+        output += data.toString()
+      })
+
+      child.on('close', (code) => {
+        this.runningPreDeleteHooks.delete(worktreePath)
+        resolve({ ran: true, exitCode: code, output })
+      })
+
+      child.on('error', (err) => {
+        this.runningPreDeleteHooks.delete(worktreePath)
+        resolve({ ran: true, exitCode: 1, output: err.message })
+      })
+    })
+  }
+
+  /**
+   * Abort a running pre-delete hook for the given worktree path.
+   * Kills the process tree. Returns true if a process was killed.
+   */
+  static abortPreDeleteHook(worktreePath: string): boolean {
+    const child = this.runningPreDeleteHooks.get(worktreePath)
+    if (!child) return false
+    child.kill('SIGKILL')
+    this.runningPreDeleteHooks.delete(worktreePath)
+    return true
   }
 
   /**

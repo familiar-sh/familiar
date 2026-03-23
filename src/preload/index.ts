@@ -277,6 +277,8 @@ const api = {
     ipcRenderer.invoke('worktree:get-pre-delete-hook-path'),
   worktreePreDeleteHookExists: (): Promise<boolean> =>
     ipcRenderer.invoke('worktree:pre-delete-hook-exists'),
+  worktreeAbortPreDeleteHook: (worktreePath: string): Promise<boolean> =>
+    ipcRenderer.invoke('worktree:abort-pre-delete-hook', worktreePath),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),

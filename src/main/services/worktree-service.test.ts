@@ -552,6 +552,43 @@ describe('WorktreeService', () => {
     })
   })
 
+  describe('abortPreDeleteHook', () => {
+    it('returns false when no hook is running for the path', () => {
+      expect(WorktreeService.abortPreDeleteHook('/nonexistent/path')).toBe(false)
+    })
+
+    it('kills a running pre-delete hook and resolves the promise', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'abort-test')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      // Hook that sleeps for 60 seconds (will be killed before completing)
+      fs.writeFileSync(
+        path.join(hooksDir, 'pre-worktree-delete.sh'),
+        '#!/bin/bash\nexec sleep 60'
+      )
+      fs.chmodSync(path.join(hooksDir, 'pre-worktree-delete.sh'), 0o755)
+
+      // Start the hook (don't await yet)
+      const hookPromise = WorktreeService.runPreDeleteHook(gitRoot, wt.path)
+
+      // Give the process a moment to start
+      await new Promise((r) => setTimeout(r, 200))
+
+      // Abort should succeed
+      const aborted = WorktreeService.abortPreDeleteHook(wt.path)
+      expect(aborted).toBe(true)
+
+      // The promise should resolve (not hang)
+      const result = await hookPromise
+      expect(result.ran).toBe(true)
+      // SIGKILL results in null exit code
+      expect(result.exitCode).toBeNull()
+
+      // Second abort should return false (process already cleaned up)
+      expect(WorktreeService.abortPreDeleteHook(wt.path)).toBe(false)
+    }, 10000)
+  })
+
   describe('ensureGitignore', () => {
     it('does not duplicate worktrees/ entry', () => {
       // Create two worktrees — each call to createWorktree calls ensureGitignore

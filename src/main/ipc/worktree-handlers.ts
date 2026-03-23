@@ -72,4 +72,8 @@ export function registerWorktreeHandlers(dataService: DataService): void {
     const projectRoot = dataService.getProjectRoot()
     return WorktreeService.preDeleteHookExists(projectRoot)
   })
+
+  ipcMain.handle('worktree:abort-pre-delete-hook', async (_, worktreePath: string): Promise<boolean> => {
+    return WorktreeService.abortPreDeleteHook(worktreePath)
+  })
 }

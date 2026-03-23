@@ -270,14 +270,35 @@ export function registerFileHandlers(
 
       let migratedCount = 0
 
-      for (const task of worktreeState.tasks) {
-        const sourceTaskDir = join(worktreeDataDir, TASKS_DIR, task.id)
-        if (!fs.existsSync(sourceTaskDir)) continue
+      // Count how many tasks will be migrated (to shift existing archived tasks down)
+      const tasksToMigrate = worktreeState.tasks.filter((t) =>
+        fs.existsSync(join(worktreeDataDir, TASKS_DIR, t.id))
+      )
 
+      // Shift existing archived tasks' sortOrder down to make room at the top
+      if (tasksToMigrate.length > 0) {
+        for (const t of targetState.tasks) {
+          if (t.status === 'archived') {
+            t.sortOrder = (t.sortOrder || 0) + tasksToMigrate.length
+            // Update the individual task.json file too
+            const taskJsonPath = join(targetTasksDir, t.id, 'task.json')
+            if (fs.existsSync(taskJsonPath)) {
+              const taskData = JSON.parse(fs.readFileSync(taskJsonPath, 'utf-8'))
+              taskData.sortOrder = t.sortOrder
+              fs.writeFileSync(taskJsonPath, JSON.stringify(taskData, null, 2))
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < tasksToMigrate.length; i++) {
+        const task = tasksToMigrate[i]
+        const sourceTaskDir = join(worktreeDataDir, TASKS_DIR, task.id)
         const targetTaskDir = join(targetTasksDir, task.id)
         await cp(sourceTaskDir, targetTaskDir, { recursive: true })
 
         // Update task: add label, set status to archived, reset agent
+        // sortOrder = i puts migrated tasks at the top of the archive list
         const migratedTask: Task = {
           ...task,
           labels: task.labels.includes(labelName)
@@ -286,7 +307,7 @@ export function registerFileHandlers(
           status: 'archived',
           agentStatus: 'idle',
           updatedAt: new Date().toISOString(),
-          sortOrder: 0
+          sortOrder: i
         }
         fs.writeFileSync(
           join(targetTaskDir, 'task.json'),

@@ -71,6 +71,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
   } | null>(null)
   const [removeKeepTasks, setRemoveKeepTasks] = useState(true)
   const [isRemoving, setIsRemoving] = useState(false)
+  // Track worktrees currently being deleted (for spinner display)
+  const [deletingWorktrees, setDeletingWorktrees] = useState<Set<string>>(new Set())
 
   // Create worktree dialog state
   const [createDialog, setCreateDialog] = useState(false)
@@ -263,34 +265,42 @@ export function ProjectSidebar(): React.JSX.Element | null {
 
   const handleRemoveWorktreeConfirm = async (): Promise<void> => {
     if (!removeDialog || isRemoving) return
-    setIsRemoving(true)
+    const { worktreePath, slug } = removeDialog
+    const keepTasks = removeKeepTasks
+
+    // Close dialog immediately so the UI doesn't hang
+    setRemoveDialog(null)
+    setDeletingWorktrees((prev) => new Set(prev).add(worktreePath))
+
     try {
-      if (removeKeepTasks) {
-        // Find the main project (parent of this worktree)
+      if (keepTasks) {
         const mainProject = openProjects.find(
-          (p) => !p.isWorktree && p.worktrees?.some((w) => w.path === removeDialog.worktreePath)
+          (p) => !p.isWorktree && p.worktrees?.some((w) => w.path === worktreePath)
         )
         if (mainProject) {
-          await window.api.worktreeMigrateTasks(
-            removeDialog.worktreePath,
-            mainProject.path,
-            removeDialog.slug
-          )
+          await window.api.worktreeMigrateTasks(worktreePath, mainProject.path, slug)
         }
       }
-      // Run pre-delete hook before removing
-      await window.api.worktreeRunPreDeleteHook(removeDialog.worktreePath, {})
-      await removeWorktree(removeDialog.worktreePath)
-      // Reload project state if we migrated tasks
-      if (removeKeepTasks) {
+      // Run pre-delete hook before removing (this can be slow)
+      await window.api.worktreeRunPreDeleteHook(worktreePath, {})
+      await removeWorktree(worktreePath)
+      if (keepTasks) {
         await loadProjectState()
       }
-      setRemoveDialog(null)
     } catch (err) {
       console.error('Failed to remove worktree:', err)
     } finally {
-      setIsRemoving(false)
+      setDeletingWorktrees((prev) => {
+        const next = new Set(prev)
+        next.delete(worktreePath)
+        return next
+      })
     }
+  }
+
+  const handleAbortWorktreeDelete = async (worktreePath: string): Promise<void> => {
+    await window.api.worktreeAbortPreDeleteHook(worktreePath)
+    // The running promise will resolve/reject and clean up deletingWorktrees
   }
 
   const handleRemoveWorktreeCancel = (): void => {
@@ -457,19 +467,34 @@ export function ProjectSidebar(): React.JSX.Element | null {
                       </div>
                     )}
                     {sidebarExpanded && (
-                      <button
-                        className={styles.removeButton}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleRemoveWorktree(wt.path, wt.slug)
-                        }}
-                        title="Remove worktree"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                          <line x1="3" y1="3" x2="9" y2="9" />
-                          <line x1="9" y1="3" x2="3" y2="9" />
-                        </svg>
-                      </button>
+                      deletingWorktrees.has(wt.path) ? (
+                        <button
+                          className={`${styles.removeButton} ${styles.deletingSpinner}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleAbortWorktreeDelete(wt.path)
+                          }}
+                          title="Click to abort deletion"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className={styles.spinnerSvg}>
+                            <circle cx="6" cy="6" r="4.5" strokeDasharray="7 3" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <button
+                          className={styles.removeButton}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRemoveWorktree(wt.path, wt.slug)
+                          }}
+                          title="Remove worktree"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                            <line x1="3" y1="3" x2="9" y2="9" />
+                            <line x1="9" y1="3" x2="3" y2="9" />
+                          </svg>
+                        </button>
+                      )
                     )}
                   </div>
                 )

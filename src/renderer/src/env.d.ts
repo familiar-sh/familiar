@@ -173,6 +173,7 @@ declare global {
       ): Promise<{ ran: boolean; exitCode: number | null; output: string }>
       worktreeGetPreDeleteHookPath(): Promise<string | null>
       worktreePreDeleteHookExists(): Promise<boolean>
+      worktreeAbortPreDeleteHook(worktreePath: string): Promise<boolean>
 
       // App info
       getVersion(): Promise<string>

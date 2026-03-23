@@ -433,4 +433,59 @@ describe('file-handlers worktree:migrate-tasks', () => {
     expect(result).toEqual({ migratedCount: 2 })
     expect(cp).toHaveBeenCalledTimes(2)
   })
+
+  it('places migrated tasks at top of archive list by shifting existing archived tasks down', async () => {
+    const existingArchived1 = makeTask({ id: 'tsk_old1', status: 'archived', sortOrder: 0 })
+    const existingArchived2 = makeTask({ id: 'tsk_old2', status: 'archived', sortOrder: 1 })
+    const existingTodo = makeTask({ id: 'tsk_todo', status: 'todo', sortOrder: 0 })
+    const wtTask1 = makeTask({ id: 'tsk_new1', status: 'in-progress' })
+    const wtTask2 = makeTask({ id: 'tsk_new2', status: 'done' })
+
+    const worktreeState = makeState([wtTask1, wtTask2])
+    const targetState = makeState([existingArchived1, existingArchived2, existingTodo])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(worktreeState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+      // Mock reads for existing archived task.json files during sortOrder shift
+      .mockReturnValueOnce(JSON.stringify(existingArchived1))
+      .mockReturnValueOnce(JSON.stringify(existingArchived2))
+
+    const result = await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    expect(result).toEqual({ migratedCount: 2 })
+
+    const writeCalls = (fs.writeFileSync as any).mock.calls
+
+    // Check that existing archived tasks were shifted down by 2 (number of migrated tasks)
+    const old1Write = writeCalls.find((c: any[]) => c[0].includes('tsk_old1/task.json'))
+    expect(old1Write).toBeTruthy()
+    expect(JSON.parse(old1Write[1]).sortOrder).toBe(2) // was 0, shifted by 2
+
+    const old2Write = writeCalls.find((c: any[]) => c[0].includes('tsk_old2/task.json'))
+    expect(old2Write).toBeTruthy()
+    expect(JSON.parse(old2Write[1]).sortOrder).toBe(3) // was 1, shifted by 2
+
+    // Check that migrated tasks got sortOrder 0 and 1 (top of archive)
+    const new1Write = writeCalls.find((c: any[]) => c[0].includes('tsk_new1/task.json'))
+    expect(new1Write).toBeTruthy()
+    expect(JSON.parse(new1Write[1]).sortOrder).toBe(0)
+
+    const new2Write = writeCalls.find((c: any[]) => c[0].includes('tsk_new2/task.json'))
+    expect(new2Write).toBeTruthy()
+    expect(JSON.parse(new2Write[1]).sortOrder).toBe(1)
+
+    // Non-archived tasks should not be shifted
+    const stateWrite = writeCalls.find((c: any[]) =>
+      c[0] === '/projects/main/.familiar/state.json'
+    )
+    const writtenState: ProjectState = JSON.parse(stateWrite[1])
+    const todoTask = writtenState.tasks.find((t) => t.id === 'tsk_todo')
+    expect(todoTask?.sortOrder).toBe(0) // unchanged
+  })
 })
